@@ -3,7 +3,7 @@ import os
 import socket
 import bluetooth
 
-from communication.link import Link
+# from communication.link import Link
 
 
 class AndroidController(link):
