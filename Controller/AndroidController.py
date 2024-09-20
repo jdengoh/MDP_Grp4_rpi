@@ -2,11 +2,26 @@ import json
 import os
 import socket
 import bluetooth
+from typing import Optional
+import BaseController
 
-# from communication.link import Link
+class Message:
+    def __init__(self, cat: str, msg: str):
 
+        self._cat = cat
+        self.msg = msg
 
-class AndroidController(link):
+    def get_cat(self) -> str:
+        return self._cat
+    
+    def get_msg(self) -> str:
+        return self.msg
+    
+    def jsonify(self) -> str:
+        return json.dumps({'cat': self._cat, 
+                           'msg': self.msg})
+
+class AndroidController(BaseController):
 
     def __innit__(self):
         super().__init__()
@@ -28,7 +43,7 @@ class AndroidController(link):
             # uuid = pass
         
             bluetooth.advertise_service(self.server_socket, 
-                                        "AndroidController", 
+                                        "MDPGroup4", 
                                         # service_id=uuid, 
                                         service_classes=[bluetooth.SERIAL_PORT_CLASS], 
                                         profiles=[bluetooth.SERIAL_PORT_PROFILE])
@@ -43,7 +58,22 @@ class AndroidController(link):
             self.server_socket.close()
             self.server_socket = None
 
-    def send(self, msg: str) -> None:
+    def disconnect(self):
+        try:
+            self.logger.info("Deactivating Bluetooth Connection")
+            self.client_socket.shutdown(socket.SHUT_RDWR)
+            self.client_socket.shutdown(socket.SHUT_RDWR)
+            self.client_socket.close()
+            self.client_socket = None
+            self.server_socket.close()
+            self.server_socket = None
+            self.logger.info("Disconnected from Android")
+
+        except Exception as e:
+            self.logger.error(f"Error disconnecting from Android: {e}")
+            raise e
+
+    def send(self, msg: Message) -> None:
         try:
             self.client_socket.send(f"{msg.jsonify()}\n".econde("utf-8"))
             self.logger.debug(f"Sent to Android: {{msg.jsonify()}}")
@@ -52,11 +82,15 @@ class AndroidController(link):
             self.logger.error(f"Error sending message to Android: {e}")
             raise e
         
-    def receive(self) -> None:
+    def receive(self) -> Optional[str]:
         try:
             data = self.client_socket.recv(1024)
+            message = data.strip().decode('utf-8')
             self.logger.debug(f"Received from Android: {data.decode('utf-8')}")
+            return message
 
         except Exception as e:
             self.logger.error(f"Error receiving message from Android: {e}")
             raise e 
+        
+

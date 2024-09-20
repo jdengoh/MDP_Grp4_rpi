@@ -14,13 +14,24 @@ class RPI:
         self.logger = event_logger()
         self.AC = AndroidController()
 
+        # self.manager = Manager()
+
+        # path mode
+        # self.robot_mode = self.manager.Value('i', 1)
+
+
 
     def run(self):
         while True:
-            self.controller.receive()
-            self.controller.send('Hello from RPI')
+
 
 
 
     def start(self):
         self.AC.connect()
+        self.AC.send("Hello")
+
+
+
+start_rpi = RPI()
+start_rpi.start()

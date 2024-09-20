@@ -4,10 +4,9 @@ import serial
 from . import BaseController
 
 
-class STM32Controller(BaseController):
+class STM32Controller(self):
 
     def __innit__(self):
-        super().__init__()
         self.serial_link = None
 
     def connect(self): 

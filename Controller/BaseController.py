@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-import Controller.event_logger as event_logger
+from LogsController import event_logger
+from typing import Optional
+
 
 class BaseController(ABC):
 
@@ -9,5 +11,5 @@ class BaseController(ABC):
     def send(self, msg: str) -> None:
         pass
 
-    def receive(self) -> None:
+    def receive(self) -> Optional[str]:
         pass
