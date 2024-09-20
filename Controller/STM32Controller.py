@@ -6,7 +6,7 @@ from . import BaseController
 
 class STM32Controller(self):
 
-    def __innit__(self):
+    def __init__(self):
         self.serial_link = None
 
     def connect(self): 

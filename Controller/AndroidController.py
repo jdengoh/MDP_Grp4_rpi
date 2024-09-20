@@ -3,9 +3,9 @@ import os
 import socket
 import bluetooth
 from typing import Optional
-import BaseController
+from BaseController import BaseController
 
-class Message:
+class android_msg:
     def __init__(self, cat: str, msg: str):
 
         self._cat = cat
@@ -23,13 +23,13 @@ class Message:
 
 class AndroidController(BaseController):
 
-    def __innit__(self):
+    def __init__(self):
         super().__init__()
         self.client_socket = None
         self.server_socket = None
 
 
-    def conncet(self):
+    def connect(self):
         self.logger.info('Activating Bluetooth Connection')
 
         try:
@@ -73,10 +73,10 @@ class AndroidController(BaseController):
             self.logger.error(f"Error disconnecting from Android: {e}")
             raise e
 
-    def send(self, msg: Message) -> None:
+    def send(self, msg:android_msg) -> None:
         try:
-            self.client_socket.send(f"{msg.jsonify()}\n".econde("utf-8"))
-            self.logger.debug(f"Sent to Android: {{msg.jsonify()}}")
+            self.client_socket.send(f"{msg.jsonify()}\n".encode("utf-8"))
+            self.logger.debug(f"Sent to Android: {msg.jsonify()}")
 
         except Exception as e:
             self.logger.error(f"Error sending message to Android: {e}")
@@ -93,4 +93,3 @@ class AndroidController(BaseController):
             self.logger.error(f"Error receiving message from Android: {e}")
             raise e 
         
-

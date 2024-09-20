@@ -1,9 +1,9 @@
 from multiprocessing import Process, Manager
 
 
-
-from communication.android_controller import AndroidController
-from communication.event_logger import event_logger
+from AndroidController import AndroidController
+from AndroidController import android_msg
+from LogsController import event_logger
 
 
 
@@ -23,13 +23,13 @@ class RPI:
 
     def run(self):
         while True:
-
-
-
+            pass
 
     def start(self):
         self.AC.connect()
-        self.AC.send("Hello")
+        print("can connect?")
+
+        self.AC.send(android_msg(cat="greeting", msg="Hello"))
 
 
 
