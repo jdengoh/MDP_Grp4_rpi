@@ -1,5 +1,5 @@
 import serial
-from settings import SERIAL_PORT, BAUD_RATE
+# from settings import SERIAL_PORT, BAUD_RATE
 
 from . import BaseController
 
@@ -10,7 +10,9 @@ class STM32Controller(BaseController):
         super().__init__()
         self.serial_link = None
 
-    def connect(self):
+    def connect(self): 
+        SERIAL_PORT = '/dev/tty1'
+        BAUD_RATE = 115200
         self.serial_link = serial.Serial(SERIAL_PORT, BAUD_RATE)
         self.logger.info(f"Connected to STM32 on {SERIAL_PORT}")
 
