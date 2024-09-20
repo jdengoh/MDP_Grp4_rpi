@@ -86,7 +86,9 @@ class AndroidController(BaseController):
         try:
             data = self.client_socket.recv(1024)
             message = data.strip().decode('utf-8')
-            self.logger.debug(f"Received from Android: {data.decode('utf-8')}")
+            # message = data.decode('utf-8')
+
+            self.logger.debug(f"Received from Android: {message}")
             return message
 
         except Exception as e:

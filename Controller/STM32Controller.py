@@ -1,12 +1,14 @@
 import serial
 # from settings import SERIAL_PORT, BAUD_RATE
 
-from . import BaseController
+from BaseController import BaseController
 
 
-class STM32Controller(self):
+class STM32Controller(BaseController):
 
     def __init__(self):
+
+        super().__init__()
         self.serial_link = None
 
     def connect(self): 
