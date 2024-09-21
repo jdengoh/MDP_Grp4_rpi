@@ -1,9 +1,13 @@
+import sys
+sys.path.append('/home/pi/Documents/MDP_Project/')
+
 from multiprocessing import Process, Manager
 import json
 import queue
 import time
 import os
 import requests
+from MDP_rpi.settings import * 
 
 from AndroidController import AndroidController, android_msg
 from LogsController import event_logger
@@ -11,7 +15,19 @@ from STM32Controller import STM32Controller
 # from consts import SYMBOL_MAP
 
 
+class PiAction:
+    def __init__(self, cat: str, value: str):
+        self.cat = cat
+        self.value = value
 
+    def get_cat(self):
+        return self.cat
+
+    def get_value(self):
+        return self.value
+
+    # def jsonify(self) -> str:
+    #     return json.dumps({'cat': self.cat, 'value': self.value})
 
 
 class RPI:
@@ -63,22 +79,22 @@ class RPI:
             self.STMC.connect()
 
             # Image Rec
-            # --- --- ---
+            self.check_api()
 
             # Define Processes
             self.proc_android_recv = Process(target=self.android_recv)
             self.proc_android_sender = Process(target=self.android_sender)
             # self.proc_stm32_recv = Process(target=self.stm32_recv)
-            # self.proc_command_follower = Process(target=self.command_follower)
-            # self.proc_rpi_action = Process(target=self.rpi_action)
+            self.proc_command_follower = Process(target=self.command_follower)
+            self.proc_rpi_action = Process(target=self.rpi_action)
 
             # Start Processes
             self.proc_android_recv.start()
             self.proc_android_sender.start()
 
             # self.proc_stm32_recv.start()
-            # self.proc_command_follower.start()
-            # self.proc_rpi_action.start()
+            self.proc_command_follower.start()
+            self.proc_rpi_action.start()
 
             # Logging
             self.logger.info("All Processes Successfully Started")
@@ -171,10 +187,7 @@ class RPI:
 
             #         self.logger.info("Received Start Command")
 
-
-            
     def android_sender(self):
-        
         while True:
             try:
                 msg: android_msg = self.android_q.get(timeout=0.5)
@@ -187,13 +200,48 @@ class RPI:
                 self.logger.error(f"Error sending to Android: {e}")
                 self.android_dropped.set()
             
+    def command_follower(self):
+        while True:
+            command: str = self.command_q.get()
+            self.unpause.wait()
+            self.movement_lock.acquire()
+            stm_32_prefixes = ("STOP", "ZZ", "UL", "UR", "PL", "PR", "RS", "OB")
+            if command.startswith(stm32_prefixes):
+                self.stm_link.send(command)
+            elif command == "FIN":
+                self.unpause.clear()
+                self.movement_lock.release()
+                self.logger.info("Commands queue finished.")
+                self.android_queue.put(AndroidMessage("info", "Commands queue finished."))
+                self.android_queue.put(AndroidMessage("status", "finished"))
+                self.rpi_action_queue.put(PiAction(cat="stitch", value=""))
+            else:
+                raise Exception(f"Unknown command: {command}")
 
+
+    def rpi_action(self):
+        pass
+       
+    def check_api(self) -> bool:
+        url = f"http://{API_IP}:{API_PORT}/status"
+        try:
+            response = requests.get(url, timeout=1)
+            if response.status_code == 200:
+                self.logger.debug("API is up!")
+                return True
+        except ConnectionError:
+            self.logger.warning("API Connection Error")
+            return False
+        except requests.Timeout:
+            self.logger.warning("API Timeout")
+            return False
+        except Exception as e:
+            self.logger.warning(f"API Exception: {e}")
+            return False
 
 
 if __name__ == "__main__":
     rpi = RPI()
+    # rpi.check_api()
     rpi.start()
-
-
-
 

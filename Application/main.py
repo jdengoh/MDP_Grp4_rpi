@@ -3,12 +3,16 @@ from flask import Flask,request, jsonify
 from flask_cors import CORS
 
 #from model import *
-from helper import command_generator
+# from helper import command_generator
 
 app = Flask(__name__)
 CORS(app)
 
 model = None
+
+@app.route('/', methods=['GET'])
+def home():
+    return "<h1>Hello from RPI!</h1>"
 
 @app.route('/status', methods=['GET'])
 def status():
