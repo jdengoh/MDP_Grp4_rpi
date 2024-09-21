@@ -27,23 +27,25 @@ def status():
 
 
 @app.route('/image', methods=['POST'])
-
-def image_rec():
+def check_img():
     file = request.files['image']
     filename = file.filename
 
-    # file.save(os.path.join( ________TODO_________))
+    file.save(os.path.join('uploads', filename))
 
     constituents = file.filename.split('_')
     obstacle_id = constituents[1]
 
- 
-    signal = constituents[2].strip(".jpg")
-    image_id = predict_image(filename, model, signal)
+
+    # # ## Week 8 ## 
+    # signal = constituents[2].strip(".jpg")
+    # image_id = predict_image(filename, model, signal)
 
     # ## Week 9 ## 
     # # We don't need to pass in the signal anymore
     # image_id = predict_image_week_9(filename,model)
+
+    image_id = predict_image(filename,model)
 
     result = {
         "obstacle_id": obstacle_id,
@@ -53,5 +55,5 @@ def image_rec():
     return jsonfiy(result)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
 
