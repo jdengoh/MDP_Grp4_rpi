@@ -4,4 +4,4 @@ BAUD_RATE = 115200
 
 # Image Recognition API
 API_IP = '192.168.4.16'
-API_PORT = 5000
+API_PORT = 5001
