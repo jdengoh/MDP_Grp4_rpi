@@ -34,7 +34,7 @@ def check_img():
     file.save(os.path.join('uploads', filename))
 
     constituents = file.filename.split('_')
-    obstacle_id = constituents[1]
+    # obstacle_id = constituents[1]
 
 
     # # ## Week 8 ## 
@@ -48,10 +48,11 @@ def check_img():
     image_id = predict_image(filename,model)
 
     result = {
-        "obstacle_id": obstacle_id,
+        # "obstacle_id": obstacle_id,
         image_id: image_id
     }
 
+    print(result)
     return jsonfiy(result)
 
 if __name__ == '__main__':
