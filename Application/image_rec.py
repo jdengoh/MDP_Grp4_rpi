@@ -16,9 +16,13 @@ import pandas
 
 
 def load_model():
-    model = torch.hub.load('./yolov5',
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    yolo5_path = os.path.join(current_path, 'yolov5')
+    pt_path = os.path.join(current_path, 'best.pt')
+
+    model = torch.hub.load(yolo5_path,
                            'custom',
-                           path='best.pt',
+                           path=pt_path,
                            source='local')
     return model
 
@@ -136,7 +140,7 @@ def predict_image(image, model):
     try:
         # Load the image
         # print(os.path.join('uploads', image))
-        img = Image.open(os.path.join('uploads', image))
+        img = Image.open(os.path.join('Application/uploads', image))
 
         # img_tensor = preprocess_image(os.path.join('uploads', image))
         # print("open")
@@ -146,11 +150,7 @@ def predict_image(image, model):
         
 
         # Images with predicted bounding boxes are saved in the runs folder
-        
-        # Disable gradient calculation for inference
-        # with torch.no_grad():
-        #     # Perform the prediction
-        #     results = model(img_tensor)
+
         
         results.save('runs')
         print(results)
@@ -233,15 +233,15 @@ def predict_image(image, model):
         name_to_id = {
             "NA": 'NA',
             "Bullseye": 10,
-            "One": 11,
-            "Two": 12,
-            "Three": 13,
-            "Four": 14,
-            "Five": 15,
-            "Six": 16,
-            "Seven": 17,
-            "Eight": 18,
-            "Nine": 19,
+            "one": 11,
+            "two": 12,
+            "three": 13,
+            "four": 14,
+            "five": 15,
+            "six": 16,
+            "seven": 17,
+            "eight": 18,
+            "nine": 19,
             "A": 20,
             "B": 21,
             "C": 22,
@@ -312,15 +312,15 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     name_to_id = {
         "NA": 'NA',
         "Bullseye": 10,
-        "One": 11,
-        "Two": 12,
-        "Three": 13,
-        "Four": 14,
-        "Five": 15,
-        "Six": 16,
-        "Seven": 17,
-        "Eight": 18,
-        "Nine": 19,
+        "one": 11,
+        "two": 12,
+        "three": 13,
+        "four": 14,
+        "five": 15,
+        "six": 16,
+        "seven": 17,
+        "eight": 18,
+        "nine": 19,
         "A": 20,
         "B": 21,
         "C": 22,
@@ -359,7 +359,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
 
     # Save the raw image
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imwrite(f"own_results/raw_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"Application/results/raw/raw_image_{label}_{rand}.jpg", img)
 
     # Draw the bounding box
     img = cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
@@ -369,7 +369,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), color, -1)
     img = cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
     # Save the annotated image
-    cv2.imwrite(f"own_results/annotated_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"Application/results/annotated/annotated_image_{label}_{rand}.jpg", img)
 
 model = load_model()
-predict_image('101_jpg.rf.42f667e704a67fe4c8663626fcaeef73.jpg', model)
+predict_image('five_image-night-_41_jpg.rf.d17cc5ec64e63d125074bce7aead7112.jpg', model)
