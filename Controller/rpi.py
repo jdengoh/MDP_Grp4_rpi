@@ -37,8 +37,6 @@ class RPI:
         self.logger = event_logger()
         self.AC = AndroidController()
         self.STMC = STM32Controller()
-        
-
         self.manager = Manager()
 
         # pathing mode
@@ -50,18 +48,21 @@ class RPI:
         self.unpause = self.manager.Event()
 
         # Movement Lock
-        # self.movement_lock = self.manager.Lock()
+        self.movement_lock = self.manager.Lock()
 
         self.rpi_action_q = self.manager.Queue() # Messages that need to be processed by RPi
         self.android_q = self.manager.Queue()
         self.command_q = self.manager.Queue()
+        self.path_q = self.manage.Queue()
 
         # Initialise Empty Processes
         self.proc_android_recv = None
         self.proc_stm32_recv = None
         self.proc_android_sender = None
         self.proc_command_follower = None
-        # self.proc_rpi_action = None
+        self.proc_rpi_action = None
+
+        self.rs_flag = False
 
         self.ack_count = 0
         self.near_flag = self.manager.Lock()
@@ -84,7 +85,7 @@ class RPI:
             # Define Processes
             self.proc_android_recv = Process(target=self.android_recv)
             self.proc_android_sender = Process(target=self.android_sender)
-            # self.proc_stm32_recv = Process(target=self.stm32_recv)
+            self.proc_stm32_recv = Process(target=self.stm32_recv)
             self.proc_command_follower = Process(target=self.command_follower)
             self.proc_rpi_action = Process(target=self.rpi_action)
 
@@ -92,7 +93,7 @@ class RPI:
             self.proc_android_recv.start()
             self.proc_android_sender.start()
 
-            # self.proc_stm32_recv.start()
+            self.proc_stm32_recv.start()
             self.proc_command_follower.start()
             self.proc_rpi_action.start()
 
@@ -100,7 +101,7 @@ class RPI:
             self.logger.info("All Processes Successfully Started")
             self.android_q.put(android_msg('info', 'All Processes Successfully Started'))
             self.android_q.put(android_msg('mode', 'path' if self.robot_mode.value == 1 else 'manual'))
-
+            
             # Handover control to the Reconnect Handler to watch over Android connection
             self.android_monitor()
 
@@ -179,6 +180,11 @@ class RPI:
             if msg_str is None:
                 continue
 
+            self.command_q.put(msg_str) #TO IMPROVE
+                
+
+
+
             # TO-DO
             # message: dict = json.loads(msg_str)
 
@@ -202,19 +208,33 @@ class RPI:
             
     def command_follower(self):
         while True:
+            command: str = self.command_queue.get()
+            self.logger.debug("wait for unpause")
+            # Wait for unpause event to be true [Main Trigger]
+            try:
+                self.logger.debug("wait for retrylock")
+                self.retrylock.acquire()
+                self.retrylock.release()
+            except:
+                self.logger.debug("wait for unpause")
+                self.unpause.wait()
+            
+            self.logger.debug("wait for movelock")
+            # Acquire lock first (needed for both moving, and snapping pictures)
+            self.movement_lock.acquire()
+
             command: str = self.command_q.get()
             self.unpause.wait()
             self.movement_lock.acquire()
-            stm_32_prefixes = ("STOP", "ZZ", "UL", "UR", "PL", "PR", "RS", "OB")
-            if command.startswith(stm32_prefixes):
-                self.stm_link.send(command)
-            elif command == "FIN":
-                self.unpause.clear()
-                self.movement_lock.release()
-                self.logger.info("Commands queue finished.")
-                self.android_queue.put(AndroidMessage("info", "Commands queue finished."))
-                self.android_queue.put(AndroidMessage("status", "finished"))
-                self.rpi_action_queue.put(PiAction(cat="stitch", value=""))
+            # stm_32_prefixes = ("FS", "BS", "FW", "BW", "FL", "FR", "BL",
+            #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
+                              
+            if command.startswith('f'):
+                self.stm_link.send('f')
+                self.stm_link.send('1')
+                self.stm_link.send('2')
+                self.stm_link.send('0')
+
             else:
                 raise Exception(f"Unknown command: {command}")
 
@@ -352,9 +372,38 @@ class RPI:
         self.logger.info(f"Image recognition results: {results} ({ans})")
         return ans
 
+    # def request_algo(self, data, robot_x=1, robot_y=1, robot_dir=0, retrying=False):
+    #     """
+    #     Requests for a series of commands and the path from the Algo API.
+    #     The received commands and path are then queued in the respective queues
+    #     """
+    #     self.logger.info("Requesting path from algo...")
+    #     self.android_queue.put(AndroidMessage(
+    #         "info", "Requesting path from algo..."))
+    #     self.logger.info(f"data: {data}")
+    #     body = {**data, "big_turn": "0", "robot_x": robot_x,
+    #             "robot_y": robot_y, "robot_dir": robot_dir, "retrying": retrying}
+    #     url = f"http://{API_IP}:{API_PORT}/path"
+    #     response = requests.post(url, json=body)
+
+    #     # Error encountered at the server, return early
+    #     if response.status_code != 200:
+    #         self.android_queue.put(AndroidMessage(
+    #             "error", "Something went wrong when requesting path from Algo API."))
+    #         self.logger.error(
+    #             "Something went wrong when requesting path from Algo API.")
+    #         return
+
+        # Parse response
+        result = json.loads(response.content)['data']
+        commands = result['commands']
+        path = result['path']
+
+        # Log commands received
+        self.logger.debug(f"Commands received from API: {commands}")
+
 
 if __name__ == "__main__":
     rpi = RPI()
     # rpi.check_api()
     rpi.start()
-

@@ -12,10 +12,14 @@ class STM32Controller(BaseController):
         self.serial_link = None
 
     def connect(self): 
-        SERIAL_PORT = '/dev/tty1'
+        SERIAL_PORT = '/dev/ttyUSB0'
         BAUD_RATE = 115200
         self.serial_link = serial.Serial(SERIAL_PORT, BAUD_RATE)
         self.logger.info(f"Connected to STM32 on {SERIAL_PORT}")
+        self.send('f')
+        self.send('6')
+        self.send('0')
+        self.send('\r')
 
     def disconnect(self):
         self.serial_link.close()
@@ -24,7 +28,7 @@ class STM32Controller(BaseController):
 
     def send(self, msg: str) -> None:
 
-        self.serial_link.write(f"{msg}\n".encode('utf-8'))
+        self.serial_link.write(f"{msg}".encode('utf-8'))
         self.logger.info(f"Sent to STM32: {msg}")
 
     def receive(self) -> None:
