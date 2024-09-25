@@ -1,6 +1,8 @@
+import os
 import time
 from flask import Flask,request, jsonify
 from flask_cors import CORS
+from image_rec import predict_image, load_model
 
 #from model import *
 # from helper import command_generator
@@ -8,7 +10,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-model = None
+
+model = load_model()
 
 @app.route('/', methods=['GET'])
 def home():
@@ -30,8 +33,9 @@ def status():
 def check_img():
     file = request.files['image']
     filename = file.filename
-
-    file.save(os.path.join('uploads', filename))
+    os.path
+    file.save(os.path.join('Application/own_results/raw', filename))
+    file_path = os.path.join('Application/own_results/raw', filename)
 
     constituents = file.filename.split('_')
     # obstacle_id = constituents[1]
@@ -45,15 +49,17 @@ def check_img():
     # # We don't need to pass in the signal anymore
     # image_id = predict_image_week_9(filename,model)
 
-    image_id = predict_image(filename,model)
+    
+    image_results = predict_image(filename,model)
 
     result = {
         # "obstacle_id": obstacle_id,
-        image_id: image_id
+        "image_id" : image_results[0],
+        "result"   : image_results[1]
     }
 
     print(result)
-    return jsonfiy(result)
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
