@@ -2,6 +2,7 @@ import json
 import os
 import socket
 import bluetooth
+import uuid
 from typing import Optional
 from BaseController import BaseController
 
@@ -41,6 +42,8 @@ class AndroidController(BaseController):
 
             port = self.server_socket.getsockname()[1]
             # uuid = pass
+
+            service_id=uuid.uuid4()
         
             bluetooth.advertise_service(self.server_socket, 
                                         "MDPGroup4", 
@@ -62,9 +65,6 @@ class AndroidController(BaseController):
         try:
             self.logger.info("Deactivating Bluetooth Connection")
             self.client_socket.shutdown(socket.SHUT_RDWR)
-            self.client_socket.shutdown(socket.SHUT_RDWR)
-            self.client_socket.close()
-            self.client_socket = None
             self.server_socket.close()
             self.server_socket = None
             self.logger.info("Disconnected from Android")

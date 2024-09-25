@@ -16,10 +16,10 @@ class STM32Controller(BaseController):
         BAUD_RATE = 115200
         self.serial_link = serial.Serial(SERIAL_PORT, BAUD_RATE)
         self.logger.info(f"Connected to STM32 on {SERIAL_PORT}")
-        self.send('f')
-        self.send('6')
-        self.send('0')
-        self.send('\r')
+        # self.send('f')
+        # self.send('6')
+        # self.send('0')
+        # self.send('\r')
 
     def disconnect(self):
         self.serial_link.close()

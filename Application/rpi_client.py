@@ -11,7 +11,7 @@ import time
 
 
 url = f"http://{API_IP}:{API_PORT}/image"
-
+print(url)
 # Initialize the PiCamera
 camera = PiCamera()
 

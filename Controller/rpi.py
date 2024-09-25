@@ -46,6 +46,7 @@ class RPI:
         self.android_dropped = self.manager.Event()  # Set when the android link drops
         # commands will be retrieved from commands queue when this event is set
         self.unpause = self.manager.Event()
+        
 
         # Movement Lock
         self.movement_lock = self.manager.Lock()
@@ -53,11 +54,11 @@ class RPI:
         self.rpi_action_q = self.manager.Queue() # Messages that need to be processed by RPi
         self.android_q = self.manager.Queue()
         self.command_q = self.manager.Queue()
-        self.path_q = self.manage.Queue()
+        self.path_q = self.manager.Queue()
 
         # Initialise Empty Processes
         self.proc_android_recv = None
-        self.proc_stm32_recv = None
+        # self.proc_stm32_recv = None
         self.proc_android_sender = None
         self.proc_command_follower = None
         self.proc_rpi_action = None
@@ -85,7 +86,7 @@ class RPI:
             # Define Processes
             self.proc_android_recv = Process(target=self.android_recv)
             self.proc_android_sender = Process(target=self.android_sender)
-            self.proc_stm32_recv = Process(target=self.stm32_recv)
+            # self.proc_stm32_recv = Process(target=self.stm32_recv) #TODOOOOO
             self.proc_command_follower = Process(target=self.command_follower)
             self.proc_rpi_action = Process(target=self.rpi_action)
 
@@ -93,7 +94,7 @@ class RPI:
             self.proc_android_recv.start()
             self.proc_android_sender.start()
 
-            self.proc_stm32_recv.start()
+            # self.proc_stm32_recv.start()
             self.proc_command_follower.start()
             self.proc_rpi_action.start()
 
@@ -181,8 +182,7 @@ class RPI:
                 continue
 
             self.command_q.put(msg_str) #TO IMPROVE
-                
-
+            self.logger.debug(f"put into command queue")
 
 
             # TO-DO
@@ -208,35 +208,41 @@ class RPI:
             
     def command_follower(self):
         while True:
-            command: str = self.command_queue.get()
+            command: str = self.command_q.get()
             self.logger.debug("wait for unpause")
+
+            print(command)
             # Wait for unpause event to be true [Main Trigger]
-            try:
-                self.logger.debug("wait for retrylock")
-                self.retrylock.acquire()
-                self.retrylock.release()
-            except:
-                self.logger.debug("wait for unpause")
-                self.unpause.wait()
+            # try:
+            #     self.logger.debug("wait for retrylock")
+            #     self.retrylock.acquire()
+            #     self.retrylock.release()
+            # except:
+            #     self.logger.debug("wait for unpause")
+            #     self.unpause.wait()
             
             self.logger.debug("wait for movelock")
             # Acquire lock first (needed for both moving, and snapping pictures)
             self.movement_lock.acquire()
-
-            command: str = self.command_q.get()
-            self.unpause.wait()
-            self.movement_lock.acquire()
+           
             # stm_32_prefixes = ("FS", "BS", "FW", "BW", "FL", "FR", "BL",
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
             if command.startswith('f'):
-                self.stm_link.send('f')
-                self.stm_link.send('1')
-                self.stm_link.send('2')
-                self.stm_link.send('0')
-
+                self.STMC.send('f')
+                self.STMC.send('1')
+                self.STMC.send('2')
+                self.STMC.send('0')
             else:
                 raise Exception(f"Unknown command: {command}")
+
+            # self.unpause.clear()
+            self.movement_lock.release()
+            self.logger.info("Commands queue finished.")
+            self.android_q.put(android_msg("info", "Commands queue finished."))
+            self.android_q.put(android_msg("status", "finished"))
+
+
 
 
     def rpi_action(self):
