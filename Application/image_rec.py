@@ -18,7 +18,7 @@ import pandas
 def load_model():
     current_path = os.path.dirname(os.path.abspath(__file__))
     yolo5_path = os.path.join(current_path, 'yolov5')
-    pt_path = os.path.join(current_path, 'best.pt')
+    pt_path = os.path.join(current_path, 'best (9).pt')
 
     model = torch.hub.load(yolo5_path,
                            'custom',
@@ -58,15 +58,16 @@ def predict_image(image, model):
 
         # Filter out Bullseye
         pred_list = df_results 
-        pred_list = pred_list[pred_list['name'] != 'Bullseye']
+        
+        # pred_list = pred_list[pred_list['name'] != 'Bullseye']
         
         # Initialize prediction to NA
         pred = 'NA'
 
         # Ignore Bullseye unless they are the only image detected and select the last label in the list (the last label will be the one with the largest bbox height)
         if len(pred_list) == 1:
-            if pred_list.iloc[0]['name'] != 'Bullseye':
-                pred = pred_list.iloc[0]
+            # if pred_list.iloc[0]['name'] != 'Bullseye':
+            pred = pred_list.iloc[0]
 
         # If more than 1 label is detected
         elif len(pred_list) > 1:
