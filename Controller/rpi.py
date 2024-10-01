@@ -12,6 +12,7 @@ from MDP_rpi.settings import *
 from AndroidController import AndroidController, android_msg
 from LogsController import event_logger
 from STM32Controller import STM32Controller
+from MDP_rpi.Application.rpi_client import snap_pic
 # from consts import SYMBOL_MAP
 
 
@@ -38,6 +39,8 @@ class RPI:
         self.AC = AndroidController()
         self.STMC = STM32Controller()
         self.manager = Manager()
+        # self.cam = PiCamera()
+        
 
         # pathing mode
         self.robot_mode = self.manager.Value('i', 1)
@@ -46,6 +49,8 @@ class RPI:
         self.android_dropped = self.manager.Event()  # Set when the android link drops
         # commands will be retrieved from commands queue when this event is set
         self.unpause = self.manager.Event()
+
+        self.snap = self.manager.Event()
         
 
         # Movement Lock
@@ -58,7 +63,7 @@ class RPI:
 
         # Initialise Empty Processes
         self.proc_android_recv = None
-        # self.proc_stm32_recv = None
+        self.proc_stm32_recv = None
         self.proc_android_sender = None
         self.proc_command_follower = None
         self.proc_rpi_action = None
@@ -86,17 +91,20 @@ class RPI:
             # Define Processes
             self.proc_android_recv = Process(target=self.android_recv)
             self.proc_android_sender = Process(target=self.android_sender)
-            # self.proc_stm32_recv = Process(target=self.stm32_recv) #TODOOOOO
+            self.proc_stm32_recv = Process(target=self.stm32_recv)
             self.proc_command_follower = Process(target=self.command_follower)
             self.proc_rpi_action = Process(target=self.rpi_action)
+            # self.proc_snap_pic = Process(target=self.snap_pic)
 
             # Start Processes
             self.proc_android_recv.start()
             self.proc_android_sender.start()
 
-            # self.proc_stm32_recv.start()
+            self.proc_stm32_recv.start()
             self.proc_command_follower.start()
             self.proc_rpi_action.start()
+            # self.proc_snap_pic = start()
+
 
             # Logging
             self.logger.info("All Processes Successfully Started")
@@ -125,6 +133,39 @@ class RPI:
 
         self.logger.info("All processes stopped")
 
+    # def snap_pic(self):
+    #     url = f"http://{API_IP}:{API_PORT}/image"
+    #     self.logger.info(f"Connecting to {url}")
+    #     # Initialize the PiCamera
+
+                    
+    #     # rpistr = 'raspistill -o /home/pi/captured_image.jpg'            
+    #     # os.system(rpistr)
+
+    #     # Capture image
+    #     self.logger.info("Start Cam")
+    #     while True:
+    #         self.cam.capture('/home/pi/captured_image.jpg')
+    #     self.logger.info("End Cam")
+
+
+    #     # Send image to Flask server
+    #     self.logger.info(f"Sending image to server")
+
+    #     with open('/home/pi/captured_image.jpg', 'rb') as img_file:
+    #         files = {'image': img_file}
+    #         response = requests.post(url, files=files)
+
+    #     # Get the response from the server
+    #     if response.status_code == 200:
+    #         print("200")
+    #         print("Image detection result:", response.json())
+            
+    #     else:
+    #         print("Error:", response.json())
+
+    #     results = json.loads(response.content)
+    #     return results
 
     def android_monitor(self):
 
@@ -229,10 +270,70 @@ class RPI:
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
             if command.startswith('f'):
-                self.STMC.send('f')
-                self.STMC.send('1')
-                self.STMC.send('2')
+                self.STMC.send('m')
+                self.STMC.send('6')
                 self.STMC.send('0')
+                self.STMC.send('\r')
+
+                
+
+            elif command.startswith('g') or command.startswith('u'):
+                self.STMC.send('u')
+                self.STMC.send('\r')
+                self.STMC.send('\r')
+                self.STMC.send('\r')
+                
+
+            # elif command.startswith('s'):
+            #     self.STMC.send('s')
+            #     self.STMC.send('t')
+            #     self.STMC.send('o')
+            #     self.STMC.send('p')
+
+            elif command.startswith('r'):
+                self.STMC.send('r')
+                self.STMC.send('9')
+                self.STMC.send('0')
+                self.STMC.send('\r')
+            
+            elif command.startswith('l'):
+                self.STMC.send('l')
+                self.STMC.send('9')
+                self.STMC.send('0')
+                self.STMC.send('\r')
+
+            elif command.startswith('b'):
+                self.STMC.send('w')
+                self.STMC.send('1')
+                self.STMC.send('0')
+                self.STMC.send('0')
+            
+            elif command.startswith('s'):
+                result = snap_pic()
+                print("the result is is", result)
+            
+            
+            elif command.startswith('a'):
+                
+                for i in range(0,3):
+                    snap_pic()
+                    self.STMC.send('u')
+                    self.STMC.send('\r')
+                    self.STMC.send('\r')
+                    self.STMC.send('\r')
+
+                    while True:
+                        if self.STMC.receive() == "Stop":
+                            break
+                        
+
+
+
+
+
+
+
+
             else:
                 raise Exception(f"Unknown command: {command}")
 
@@ -355,6 +456,7 @@ class RPI:
             if response.status_code != 200:
                 self.logger.error("Something went wrong when requesting path from image-rec API. Please try again.")
                 return
+            
 
             results = json.loads(response.content)
 
@@ -407,6 +509,57 @@ class RPI:
 
         # Log commands received
         self.logger.debug(f"Commands received from API: {commands}")
+
+    def stm32_recv(self) -> None:
+        """
+        [Child Process] Receive acknowledgement messages from STM32, and release the movement lock
+        """
+        while True:
+
+            msg: str = self.STMC.receive()
+            
+            if msg == "Stop":
+                self.snap.set()
+
+            self.logger.info(f"{msg}")
+
+            
+
+            # if message.startswith("ACK"):
+            #     if self.rs_flag == False:
+            #         self.rs_flag = True
+            #         self.logger.debug("ACK for RS00 from STM32 received.")
+            #         continue
+            #     try:
+            #         self.movement_lock.release()
+            #         try:
+            #             self.retrylock.release()
+            #         except:
+            #             pass
+            #         self.logger.debug(
+            #             "ACK from STM32 received, movement lock released.")
+
+            #         cur_location = self.path_queue.get_nowait()
+
+            #         self.current_location['x'] = cur_location['x']
+            #         self.current_location['y'] = cur_location['y']
+            #         self.current_location['d'] = cur_location['d']
+            #         self.logger.info(
+            #             f"self.current_location = {self.current_location}")
+            #         self.android_queue.put(AndroidMessage('location', {
+            #             "x": cur_location['x'],
+            #             "y": cur_location['y'],
+            #             "d": cur_location['d'],
+            #         }))
+
+            #     except Exception:
+            #         self.logger.warning("Tried to release a released lock!")
+            # else:
+            #     self.logger.warning(
+            #         f"Ignored unknown message from STM: {message}")
+
+            
+
 
 
 if __name__ == "__main__":
