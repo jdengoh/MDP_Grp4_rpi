@@ -54,8 +54,6 @@ class RPI:
         
 
         # Movement Lock
-        self.movement_lock = self.manager.Lock()
-
         self.rpi_action_q = self.manager.Queue() # Messages that need to be processed by RPi
         self.android_q = self.manager.Queue()
         self.command_q = self.manager.Queue()
@@ -68,10 +66,15 @@ class RPI:
         self.proc_command_follower = None
         self.proc_rpi_action = None
 
-        self.rs_flag = False
+        self.movement_lock = self.manager.Lock()
 
-        self.ack_count = 0
-        self.near_flag = self.manager.Lock()
+        # Data
+        self.rs_flag = False
+        self.success_obstacles = self.manager.list()
+        self.failed_obstacles = self.manager.list()
+        self.obstacles = self.manager.dict()
+        self.current_location = self.manager.dict()
+        self.failed_attempt = False
 
 
     
@@ -80,7 +83,8 @@ class RPI:
         try:
             # Android Connection
             self.AC.connect()
-            self.android_q.put(android_msg('info', 'Connected to RPI!'))
+            self.android_q.put(android_msg('info', 
+                                           'Connected to RPI!'))
 
             # STM Connection
             self.STMC.connect()
@@ -94,22 +98,19 @@ class RPI:
             self.proc_stm32_recv = Process(target=self.stm32_recv)
             self.proc_command_follower = Process(target=self.command_follower)
             self.proc_rpi_action = Process(target=self.rpi_action)
-            # self.proc_snap_pic = Process(target=self.snap_pic)
 
             # Start Processes
             self.proc_android_recv.start()
             self.proc_android_sender.start()
-
             self.proc_stm32_recv.start()
             self.proc_command_follower.start()
             self.proc_rpi_action.start()
-            # self.proc_snap_pic = start()
 
 
             # Logging
             self.logger.info("All Processes Successfully Started")
-            self.android_q.put(android_msg('info', 'All Processes Successfully Started'))
-            self.android_q.put(android_msg('mode', 'path' if self.robot_mode.value == 1 else 'manual'))
+            self.android_q.put(android_msg("info", "All Processes Successfully Started"))
+            # self.android_q.put(android_msg("mode", "path" if self.robot_mode.value == 1 else "manual"))
             
             # Handover control to the Reconnect Handler to watch over Android connection
             self.android_monitor()
@@ -119,19 +120,18 @@ class RPI:
             self.stop()
 
     def stop(self):
-        self.logger.info("Stopping all processes")
-        self.android_q.put(android_msg('info', 'Stopping all processes'))
-
+        # self.android_q.put(android_msg('info', 'Stopping all processes'))
         self.AC.disconnect()
         self.STMC.disconnect()
+        self.logger.info("All processes stopped")
 
-        self.proc_android_recv.terminate()
-        self.proc_android_sender.terminate()
+
+        # self.proc_android_recv.terminate()
+        # self.proc_android_sender.terminate()
         # self.proc_stm32_recv.terminate()
         # self.proc_command_follower.terminate()
         # self.proc_rpi_action.terminate()
 
-        self.logger.info("All processes stopped")
 
     # def snap_pic(self):
     #     url = f"http://{API_IP}:{API_PORT}/image"
@@ -172,9 +172,9 @@ class RPI:
         self.logger.info("Monitoring Android")
 
         while True:
-            
-            self.android_dropped.wait()
 
+            # Wait for Android to drop
+            self.android_dropped.wait()
             self.logger.error("Android Disconnected!")
 
             # Stop and kill processes
@@ -203,8 +203,8 @@ class RPI:
             self.proc_android_sender.start()
 
             self.logger.debug("Processes restarted")
-            self.android_q.put(android_msg('info', 'You have been reconnected!'))
-            self.android_q.put(AndroidMessage('mode', 'path' if self.robot_mode.value == 1 else 'manual'))
+            self.android_q.put(android_msg("info", "You have been reconnected!"))
+            self.android_q.put(AndroidMessage("mode", "path" if self.robot_mode.value == 1 else "manual"))
 
             self.android_drop.clear()
 
@@ -222,17 +222,11 @@ class RPI:
             if msg_str is None:
                 continue
 
+            # TO-DO -> process android messages
+
             self.command_q.put(msg_str) #TO IMPROVE
             self.logger.debug(f"put into command queue")
 
-
-            # TO-DO
-            # message: dict = json.loads(msg_str)
-
-            # if message['cat'] == 'control':
-            #     if message['value'] == 'start':
-
-            #         self.logger.info("Received Start Command")
 
     def android_sender(self):
         while True:

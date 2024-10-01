@@ -19,8 +19,8 @@ class android_msg:
         return self.msg
     
     def jsonify(self) -> str:
-        return json.dumps({'cat': self._cat, 
-                           'msg': self.msg})
+        return json.dumps({"cat": self._cat, 
+                           "msg": self.msg})
 
 class AndroidController(BaseController):
 
