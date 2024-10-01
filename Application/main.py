@@ -28,6 +28,7 @@ def status():
 #     data = request.json
 #     obstacles = content['obstacles']
 
+@app.route('/receive_obstacle_data', methods=['POST'])
 
 @app.route('/image', methods=['POST'])
 def check_img():
