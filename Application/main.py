@@ -7,6 +7,16 @@ from flask import Flask,request, jsonify
 from flask_cors import CORS
 from image_rec import predict_image, load_model
 
+import sys
+import time
+from typing import List
+import socket
+import pickle
+from algorithm import settings
+from algorithm.app import AlgoSimulator, AlgoMinimal
+from algorithm.entities.assets.direction import Direction
+from algorithm.entities.grid.obstacle import Obstacle
+
 #from model import *
 # from helper import command_generator
 
@@ -99,6 +109,15 @@ def check_img():
 
     print(result)
     return jsonify(result)
+
+def run_algo(obstacle_data):
+    obstacles = parse_obstacle_data(obstacle_data)
+    algo = AlgoMinimal(obstacles)
+    algo.init()
+    order = algo.execute()
+    commands = algo.robot.convert_all_commands()
+    order_and_commands = [order, commands, path_hist]
+    return order_and_commands
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
