@@ -1,5 +1,8 @@
 import os
+import sys
+sys.path.append('/home/pi/Documents/MDP_Project/Application')
 import time
+import json
 from flask import Flask,request, jsonify
 from flask_cors import CORS
 from image_rec import predict_image, load_model
@@ -12,6 +15,20 @@ CORS(app)
 
 
 model = load_model()
+# DATA_FILE = os.path.join(os.getcwd(), 'obstacles_data.json')
+DATA_FILE ='Application/obstacles_data.json'
+
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f)
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        print("exists!")
+        with open(DATA_FILE, 'r') as f:
+            return json.load(f)
+    return {"obstacles": []}
+
 
 @app.route('/', methods=['GET'])
 def home():
@@ -28,7 +45,28 @@ def status():
 #     data = request.json
 #     obstacles = content['obstacles']
 
-@app.route('/receive_obstacle_data', methods=['POST'])
+@app.route('/save_obstacle_data', methods=['POST'])
+def save_obstacle_data():
+    data = request.json
+    current_data = load_data()
+    current_data['obstacles'].append(data)
+    save_data(current_data)
+    return jsonify(current_data)
+
+
+@app.route('/receive_obstacle_data', methods=['GET'])
+def get_obstacle_data():
+    data = load_data()
+    print(data)
+    return jsonify(data)
+
+
+@app.route('/send_command_data', methods=['POST'])
+def send_command_data():
+    data = request.json
+    print(data)
+    return jsonify(data)
+
 
 @app.route('/image', methods=['POST'])
 def check_img():
