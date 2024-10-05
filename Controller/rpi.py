@@ -224,9 +224,20 @@ class RPI:
 
             # TO-DO -> process android messages
 
-            self.command_q.put(msg_str) #TO IMPROVE
-            self.logger.debug(f"put into command queue")
+            try:
+                msg: dict = json.loads(msg_str)
+                if msg['cat'] == 'obstacles':
+                    # debug
+                    print("cat: ", msg['cat'])
+                    print("value: ", msg['value'])
+                    self.rpi_action_q.put(PiAction('obstacles', msg['value']))
+                    self.logger.info("Obstacles added to RPI Action Queue")
 
+            except:
+                self.logger.error(f"Error parsing JSON: {msg_str}")
+                self.command_q.put(msg_str) #TO IMPROVE
+                self.logger.debug(f"put into command queue")
+                continue
 
     def android_sender(self):
         while True:
@@ -341,7 +352,40 @@ class RPI:
 
 
     def rpi_action(self):
-        pass
+        while True:
+            action: PiAction = self.rpi_action_q.get()
+            self.logger.info(
+                f"PiAction retrieved from queue: {action.cat} {action.value}")
+            if action.cat == "obstacles":
+                temp_obstacles = {}
+                for obs in action.value['obstacles']:
+                    print("ITS CORRECT PRINTING OBSTACLES:")
+                    print("obstacles: ",obs)
+
+                    if obs['direction'] == "E":
+                        obs['direction'] = 0
+                    elif obs['direction'] == "N":
+                        obs['direction'] = 90
+                    elif obs['direction'] == "W":
+                        obs['direction'] = 180
+                    elif obs['direction'] == "S":
+                        obs['direction'] = -90
+
+                    temp_obstacles[obs['id']] = [obs['x'],\
+                                                obs['y'], \
+                                                obs['direction'], \
+                                                obs['id']]
+
+                #     self.obstacles[obs['id']] = obs
+                # self.request_algo(action.value)
+                self.obstacles["obstacles"] = temp_obstacles
+                print(self.obstacles)
+                self.request_algo(self.obstacles)
+
+            elif action.cat == "snap":
+                self.snap_and_rec(obstacle_id_with_signal=action.value)
+            elif action.cat == "stitch":
+                self.request_stitch()
        
     def check_api(self) -> bool:
         url = f"http://{API_IP}:{API_PORT}/status"
@@ -474,27 +518,28 @@ class RPI:
         self.logger.info(f"Image recognition results: {results} ({ans})")
         return ans
 
-    # def request_algo(self, data, robot_x=1, robot_y=1, robot_dir=0, retrying=False):
-    #     """
-    #     Requests for a series of commands and the path from the Algo API.
-    #     The received commands and path are then queued in the respective queues
-    #     """
-    #     self.logger.info("Requesting path from algo...")
-    #     self.android_queue.put(AndroidMessage(
-    #         "info", "Requesting path from algo..."))
-    #     self.logger.info(f"data: {data}")
-    #     body = {**data, "big_turn": "0", "robot_x": robot_x,
-    #             "robot_y": robot_y, "robot_dir": robot_dir, "retrying": retrying}
-    #     url = f"http://{API_IP}:{API_PORT}/path"
-    #     response = requests.post(url, json=body)
+    def request_algo(self, data, robot_x=1, robot_y=1, robot_dir=0, retrying=False):
+        """
+        Requests for a series of commands and the path from the Algo API.
+        The received commands and path are then queued in the respective queues
+        """
+        self.logger.info("Requesting path from algo...")
+        self.android_queue.put(AndroidMessage(
+            "info", "Requesting path from algo..."))
+        self.logger.info(f"data: {data}")
+        # body = {**data, "big_turn": "0", "robot_x": robot_x,
+        #         "robot_y": robot_y, "robot_dir": robot_dir, "retrying": retrying}
 
-    #     # Error encountered at the server, return early
-    #     if response.status_code != 200:
-    #         self.android_queue.put(AndroidMessage(
-    #             "error", "Something went wrong when requesting path from Algo API."))
-    #         self.logger.error(
-    #             "Something went wrong when requesting path from Algo API.")
-    #         return
+        url = f"http://{API_IP}:{API_PORT}/algo"
+        response = requests.post(url, json=body)
+
+        # Error encountered at the server, return early
+        if response.status_code != 200:
+            self.android_queue.put(AndroidMessage(
+                "error", "Something went wrong when requesting path from Algo API."))
+            self.logger.error(
+                "Something went wrong when requesting path from Algo API.")
+            return
 
         # Parse response
         result = json.loads(response.content)['data']

@@ -12,7 +12,7 @@ class STM32Controller(BaseController):
         self.serial_link = None
 
     def connect(self): 
-        SERIAL_PORT = '/dev/tty'
+        SERIAL_PORT = '/dev/ttyS0' # TEMPORARY CHANGE
         BAUD_RATE = 115200
         self.serial_link = serial.Serial(SERIAL_PORT, BAUD_RATE)
         self.logger.info(f"Connected to STM32 on {SERIAL_PORT}")
