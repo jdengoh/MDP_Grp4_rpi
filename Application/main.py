@@ -110,6 +110,14 @@ def check_img():
     print(result)
     return jsonify(result)
 
+@app.route('/algo', methods=['POST'])
+def algo():
+    data = request.json
+    print(data)
+    order_and_commands = run_algo(data)
+    return jsonify(order_and_commands)
+
+
 def run_algo(obstacle_data):
     obstacles = parse_obstacle_data(obstacle_data)
     algo = AlgoMinimal(obstacles)
@@ -118,6 +126,18 @@ def run_algo(obstacle_data):
     commands = algo.robot.convert_all_commands()
     order_and_commands = [order, commands, path_hist]
     return order_and_commands
+
+
+def parse_obstacle_data(data) -> List[Obstacle]:
+    obs = []
+    for obstacle_params in data:
+        obs.append(Obstacle(obstacle_params[0]+5,
+                            obstacle_params[1]+5,
+                            Direction(obstacle_params[2]),
+                            obstacle_params[3]))
+    # [[x, y, orient, index], [x, y, orient, index]]
+    return obs
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
