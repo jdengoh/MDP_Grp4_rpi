@@ -112,9 +112,10 @@ def check_img():
 
 @app.route('/algo', methods=['POST'])
 def algo():
-    data = request.json
-    print(data)
+    data = request.json['obstacles']
+    print("Data Received by algo\n" + str(data))
     order_and_commands = run_algo(data)
+    print("Order and commands: " + str(order_and_commands))
     return jsonify(order_and_commands)
 
 
@@ -124,21 +125,33 @@ def run_algo(obstacle_data):
     algo.init()
     order = algo.execute()
     commands = algo.robot.convert_all_commands()
-    order_and_commands = [order, commands, path_hist]
+    print("Commands converted: " + str(commands))
+    print("Order: " + str(order))
+    order_and_commands = {
+        "order": order,
+        "commands": commands,
+        "path_hist": None
+    }
     return order_and_commands
 
 
-def parse_obstacle_data(data) -> List[Obstacle]:
-    obs = []
-    for obstacle_params in data:
-        obs.append(Obstacle(obstacle_params[0]+5,
-                            obstacle_params[1]+5,
-                            Direction(obstacle_params[2]),
-                            obstacle_params[3]))
-    # [[x, y, orient, index], [x, y, orient, index]]
-    return obs
+def parse_obstacle_data(data: dict) -> List[Obstacle]:
+    obstacle_list = []
+    
+    for key, obstacle_params in data.items():  # Iterate over the dictionary's items
+        obstacle_list.append(Obstacle(
+            obstacle_params[0]*10 + 5,  # x-coordinate
+            (20-obstacle_params[1]-1)*10 + 5,  # y-coordinate
+            Direction(obstacle_params[2]),  # direction (0, 90, 180, -90)
+            obstacle_params[3]  # index (ID)
+        ))
+    
+    print("Converted obstacles:")
+    for obstacle in obstacle_list:
+        print(obstacle)
+    
+    return obstacle_list
 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
