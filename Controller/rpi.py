@@ -520,6 +520,28 @@ class RPI:
         # Log commands received
         self.logger.debug(f"Commands received from API: {commands}")
 
+
+
+
+    def request_stitch(self):
+        """Sends a stitch request to the image recognition API to stitch the different images together"""
+        url = f"http://{API_IP}:{API_PORT}/stitch"
+        response = requests.get(url)
+
+        # If error, then log, and send error to Android
+        if response.status_code != 200:
+            # Notify android
+            self.android_queue.put(android_msg(
+                "error", "Something went wrong when requesting stitch from the API."))
+            self.logger.error(
+                "Something went wrong when requesting stitch from the API.")
+            return
+
+        self.logger.info("Images stitched!")
+        self.android_queue.put(android_msg("info", "Images stitched!"))
+
+
+
     def stm32_recv(self) -> None:
 
         while True:
