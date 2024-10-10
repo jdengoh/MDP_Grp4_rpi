@@ -248,10 +248,40 @@ class RPI:
             # stm_32_prefixes = ("FS", "BS", "FW", "BW", "FL", "FR", "BL",
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
-            pre = ['S', 'B', 'L', 'R'] # todo
+            # pre = ['S', 'B', 'L', 'R'] # todo
 
             if command.startswith('S/'):
                 self.STMC.send('m')
+                self.STMC.send(command[2])
+                self.STMC.send(command[3])
+                self.STMC.send(command[4])
+
+             elif command.startswith('R/'):
+                self.STMC.send('r')
+                self.STMC.send('9')
+                self.STMC.send('0')
+                self.STMC.send('\r')
+            
+            elif command.startswith('L/'):
+                self.STMC.send('l')
+                self.STMC.send('9')
+                self.STMC.send('0')
+                self.STMC.send('\r')
+
+            elif command.startswith('SB'):
+                self.STMC.send('w')
+                self.STMC.send('1')
+                self.STMC.send('0')
+                self.STMC.send('0')
+
+            elif command.startswith('LB'):
+                self.STMC.send('k')
+                self.STMC.send(command[2])
+                self.STMC.send(command[3])
+                self.STMC.send(command[4])
+
+            elif command.startswith('LB'):
+                self.STMC.send('t')
                 self.STMC.send(command[2])
                 self.STMC.send(command[3])
                 self.STMC.send(command[4])
@@ -271,23 +301,7 @@ class RPI:
             #     self.STMC.send('o')
             #     self.STMC.send('p')
 
-            elif command.startswith('R/'):
-                self.STMC.send('r')
-                self.STMC.send('9')
-                self.STMC.send('0')
-                self.STMC.send('\r')
-            
-            elif command.startswith('L/'):
-                self.STMC.send('l')
-                self.STMC.send('9')
-                self.STMC.send('0')
-                self.STMC.send('\r')
-
-            elif command.startswith('SB'):
-                self.STMC.send('w')
-                self.STMC.send('1')
-                self.STMC.send('0')
-                self.STMC.send('0')
+           
             
             elif command.startswith('p'):
                 # obstacle_id_with_signal = command.replace("SNAP", "")                
@@ -346,7 +360,7 @@ class RPI:
                         obs['direction'] = 180
                     elif obs['direction'] == "S":
                         obs['direction'] = -90
-                    temp_obstacles[obs['id']] = [obs['x'],\
+                    temp_obstacles[obs['id']-1] = [obs['x'],\
                                                 obs['y'], \
                                                 obs['direction'], \
                                                 obs['id']]
