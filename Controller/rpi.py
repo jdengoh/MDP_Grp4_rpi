@@ -352,7 +352,7 @@ class RPI:
                                                 obs['id']]
                 self.obstacles["obstacles"] = temp_obstacles
                 print(self.obstacles)
-                self.request_algo(self.obstacles)
+                self.request_algo(dict(self.obstacles))
             
             # NOT YET IMPLEMENTED
             elif action.cat == "snap":
@@ -502,7 +502,7 @@ class RPI:
         #         "robot_y": robot_y, "robot_dir": robot_dir, "retrying": retrying}
 
         url = f"http://{API_IP}:{API_PORT}/algo"
-        response = requests.post(url, json=body) # ERROR IS HERE
+        response = requests.post(url, json=data) # ERROR IS HERE
 
         # Error encountered at the server, return early
         if response.status_code != 200:
