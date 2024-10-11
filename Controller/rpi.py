@@ -256,7 +256,7 @@ class RPI:
                 self.STMC.send(command[3])
                 self.STMC.send(command[4])
 
-             elif command.startswith('R/'):
+            elif command.startswith('R/'):
                 self.STMC.send('r')
                 self.STMC.send('9')
                 self.STMC.send('0')
@@ -527,9 +527,17 @@ class RPI:
             return
 
         # Parse response
-        result = json.loads(response.content)['data']
-        commands = result['commands']
-        path = result['path']
+
+        result = json.loads(response.content)
+        #print("Full result:", result)
+        commands = result.get('commands', [])
+        order = result.get('order', [])
+        path_hist = result.get('path_hist')
+
+         # Parse response
+      #  result = json.loads(response.content)['data']
+       # commands = result['commands']
+        #path = result['path']
 
         # Log commands received
         self.logger.debug(f"Commands received from API: {commands}")
