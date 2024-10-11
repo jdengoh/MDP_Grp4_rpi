@@ -186,10 +186,10 @@ class RPI:
                         if not self.check_api():
                             self.logger.error(
                                 "API is down! Start command aborted.")
-                            self.android_queue.put(AndroidMessage(
+                            self.android_queue.put(android_msg(
                                 'error', "API is down, start command aborted."))
 
-                        if not self.command_queue.empty():
+                        if not self.command_q.empty():
                             # RESET GYRO HERE AND START -- TO IMPROVE
                             # self.logger.info("Gryo reset!")
                             # self.stm_link.send("RS00")
@@ -197,14 +197,14 @@ class RPI:
                             self.unpause.set()
                             self.logger.info(
                                 "Start command received, starting robot on path!")
-                            self.android_queue.put(AndroidMessage(
+                            self.android_queue.put(android_msg(
                                 'info', 'Starting robot on path!'))
                             self.android_queue.put(
-                                AndroidMessage('status', 'running'))
+                                android_msg('status', 'running'))
                         else:
                             self.logger.warning(
                                 "The command queue is empty, please set obstacles.")
-                            self.android_queue.put(AndroidMessage(
+                            self.android_queue.put(android_msg(
                                 "error", "Command queue is empty, did you set obstacles?"))
 
 
@@ -280,7 +280,7 @@ class RPI:
                 self.STMC.send(command[3])
                 self.STMC.send(command[4])
 
-            elif command.startswith('LB'):
+            elif command.startswith('RB'):
                 self.STMC.send('t')
                 self.STMC.send(command[2])
                 self.STMC.send(command[3])
@@ -303,11 +303,11 @@ class RPI:
 
            
             
-            elif command.startswith('p'):
+            elif command.startswith('P'):
                 # obstacle_id_with_signal = command.replace("SNAP", "")                
                 # result = snap_pic()
                 # print("the result is is", result)
-                self.rpi_action_queue.put(PiAction(cat="snap", value=""))
+                self.rpi_action_queue.put(PiAction(cat="snap", value=command[1:]))
                     # PiAction(cat="snap", value=obstacle_id_with_signal))
 
             elif command == "FIN": #(MY RETRYYY FUNCTON)
@@ -525,23 +525,34 @@ class RPI:
             self.logger.error(
                 "Something went wrong when requesting path from Algo API.")
             return
-
-        # Parse response
-
+        
         result = json.loads(response.content)
         #print("Full result:", result)
         commands = result.get('commands', [])
         order = result.get('order', [])
+        
+        id_index = 0
+
+        for i, command in enumerate(commands):
+            if command == 'P' and id_index < len(order):
+                commands[i] = f'P{order[id_index]}'
+                id_index += 1
+
         path_hist = result.get('path_hist')
 
-         # Parse response
-      #  result = json.loads(response.content)['data']
-       # commands = result['commands']
-        #path = result['path']
-
+        # Parse response
+        # result = json.loads(response.content)['data']
+        # commands = result['commands']
+        # path = result['path']
         # Log commands received
         self.logger.debug(f"Commands received from API: {commands}")
-
+        
+        self.clear_queues()
+        for c in commands:
+            self.logger.info(f"Command Queue input: {c}")
+            self.command_q.put(c)
+        # for p in path[1:]:  # ignore first element as it is the starting position of the robot
+        #     self.path_queue.put(p)
 
 
 
@@ -562,7 +573,10 @@ class RPI:
         self.logger.info("Images stitched!")
         self.android_queue.put(android_msg("info", "Images stitched!"))
 
-
+    def clear_queues(self):
+        """Clear both command and path queues"""
+        while not self.command_q.empty():
+            self.command_q.get()
 
     def stm32_recv(self) -> None:
 
@@ -574,7 +588,7 @@ class RPI:
                 self.snap.set()
             self.logger.info(f"{msg}")
 
-            if message.startswith("ACK"):
+            if msg.startswith("ACK"):
                 if self.rs_flag == False:
                     self.rs_flag = True
                     self.logger.debug("ACK for RS00 from STM32 received.")
@@ -605,7 +619,7 @@ class RPI:
                     self.logger.warning("Tried to release a released lock!")
             else:
                 self.logger.warning(
-                    f"Ignored unknown message from STM: {message}")
+                    f"Ignored unknown message from STM: {msg}")
 
             
 
