@@ -27,6 +27,7 @@ def snap_pic():
     with open('/home/pi/captured_image.jpg', 'rb') as img_file:
         files = {'image': img_file}
         response = requests.post(url, files=files)
+        print("SENT SUCCESSFL")
 
     # Get the response from the server
     if response.status_code == 200:
