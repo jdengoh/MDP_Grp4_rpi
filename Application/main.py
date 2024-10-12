@@ -5,7 +5,7 @@ import time
 import json
 from flask import Flask,request, jsonify
 from flask_cors import CORS
-from image_rec import predict_image, load_model
+from image_rec import predict_image, load_model, stitch_image, stitch_image_own
 
 import sys
 import time
@@ -83,8 +83,8 @@ def check_img():
     file = request.files['image']
     filename = file.filename
     os.path
-    file.save(os.path.join('Application/own_results/raw', filename))
-    file_path = os.path.join('Application/own_results/raw', filename)
+    file.save(os.path.join('own_results/raw', filename))
+    file_path = os.path.join('own_results/raw', filename)
 
     constituents = file.filename.split('_')
     # obstacle_id = constituents[1]
@@ -109,6 +109,18 @@ def check_img():
 
     print(result)
     return jsonify(result)
+
+@app.route('/stitch', methods=['get'])
+def stitch():
+    """
+    This is the main endpoint for the stitching command. Stitches the images using two different functions, in effect creating two stitches, just for redundancy purposes
+    """
+    img = stitch_image()
+    img.show()
+    img2 = stitch_image_own()
+    img2.show()
+    return jsonify({"result": "ok"})
+
 
 @app.route('/algo', methods=['POST'])
 def algo():
@@ -141,7 +153,7 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
     for key, obstacle_params in data.items():  # Iterate over the dictionary's items
         obstacle_list.append(Obstacle(
             obstacle_params[0]*10 + 5,  # x-coordinate
-            (20-obstacle_params[1]-1)*10 + 5,  # y-coordinate
+            (obstacle_params[1])*10 + 5,  # y-coordinate
             Direction(obstacle_params[2]),  # direction (0, 90, 180, -90)
             obstacle_params[3]  # index (ID)
         ))
@@ -151,7 +163,6 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
         print(obstacle)
     
     return obstacle_list
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

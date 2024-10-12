@@ -31,7 +31,7 @@ def predict_image(image, model, signal='C'):
     try:
         # Load the image
         # print(os.path.join('uploads', image))
-        img = Image.open(os.path.join('Application/own_results/raw', image))
+        img = Image.open(os.path.join('own_results/raw', image))
 
         # img_tensor = preprocess_image(os.path.join('uploads', image))
         # print("open")

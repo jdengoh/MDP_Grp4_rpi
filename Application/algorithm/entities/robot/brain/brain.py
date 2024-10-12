@@ -71,10 +71,10 @@ class Brain:
     def plan_path(self):
         print("-" * 40)
         print("STARTING PATH COMPUTATION...")
-        if len(self.grid.obstacles) == 4:
-            consider = 20
+        if len(self.grid.obstacles) <= 4:
+            consider = 20 #20
         elif len(self.grid.obstacles) > 4:
-            consider = 1 #for testing, use 50 normally
+            consider = 5 #for testing, use 50 normally
         paths = self.compute_simple_hamiltonian_path()[0:consider]
         print(f"Considering", consider, "paths")
         print()
