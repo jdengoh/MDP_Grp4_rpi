@@ -298,12 +298,13 @@ class RPI:
 
             if command.startswith('S/'):
                 # command[2:4]
-                int_portion = int(command[1:])  # This will be 20 (integer)
+                int_portion = int(command[2:])  # This will be 20 (integer)
                 # str_portion = str(int_portion).zfill(3)
-                if len(int_portion)==  2:
+                speed = str(int_portion)
+                if len(str(speed))==  2:
                     self.STMC.send('m')
-                    self.STMC.send(int_portion[0])
-                    self.STMC.send(int_portion[1])
+                    self.STMC.send(speed[0])
+                    self.STMC.send(speed[1])
                     self.STMC.send('\r')
                 else:
                     self.STMC.send('m')
@@ -324,18 +325,19 @@ class RPI:
                 self.STMC.send('\r')
 
             elif command.startswith('SB'):
-                int_portion = int(command[1:])  # This will be 20 (integer)
+                int_portion = int(command[2:])  # This will be 20 (integer)
                 # str_portion = str(int_portion).zfill(3)
-                if len(int_portion)==  2:
+                speed = str(int_portion)
+                if len(str(speed))==  2:
                     self.STMC.send('w')
-                    self.STMC.send(int_portion[0])
-                    self.STMC.send(int_portion[1])
+                    self.STMC.send(speed[0])
+                    self.STMC.send(speed[1])
                     self.STMC.send('\r')
                 else:
                     self.STMC.send('w')
-                    self.STMC.send(int_portion[0])
-                    self.STMC.send(int_portion[1])
-                    self.STMC.send(int_portion[2])
+                    self.STMC.send(speed[0])
+                    self.STMC.send(speed[1])
+                    self.STMC.send(speed[2])
 
 
             elif command.startswith('LB'):
