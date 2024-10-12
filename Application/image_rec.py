@@ -27,7 +27,7 @@ def load_model():
     return model
 
 
-def predict_image(image, model):
+def predict_image(image, model, signal='C'):
     try:
         # Load the image
         # print(os.path.join('uploads', image))
