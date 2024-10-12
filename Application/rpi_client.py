@@ -27,12 +27,12 @@ def snap_pic():
     with open('/home/pi/captured_image.jpg', 'rb') as img_file:
         files = {'image': img_file}
         response = requests.post(url, files=files)
-        print("SENT SUCCESSFL")
+        print("SENT SUCCESSFUL")
 
     # Get the response from the server
     if response.status_code == 200:
-        print("200")
-        print("Image detection result:", response.json())
+        # print("200")
+        print("rpi_client - Image detection result:", response.json())
         
     else:
         print("Error:", response.json())
@@ -40,6 +40,9 @@ def snap_pic():
 
     camera.close()
     results = response.json()
+    print(results)
+
+    return results['image_id']
 
 # results = snap_pic()
 # print (results)
