@@ -9,7 +9,7 @@ import os
 import requests
 from MDP_rpi.settings import * 
 
-from AndroidController import AndroidController, android_msg
+from AndroidController import AndroidController, android_msg, android_result
 from LogsController import event_logger
 from STM32Controller import STM32Controller
 from MDP_rpi.Application.rpi_client import snap_pic
@@ -178,7 +178,7 @@ class RPI:
                     if msg['value'] == 'start':
                         if not self.check_api():
                             self.logger.error("API is down! Start command aborted.")
-                            self.android_queue.put(android_msg(
+                            self.android_q.put(android_msg(
                                 'error', "API is down, start command aborted."))
 
                         if not self.command_q.empty():
@@ -195,7 +195,7 @@ class RPI:
                             # self.android_q.put(android_msg(
                             #     'info', 'Starting robot on path!'))
                             self.android_q.put(
-                                android_msg('status', 'running'))
+                                {"status":"running"})
                         else:
                             self.logger.warning(
                                 "The command queue is empty, please set obstacles.")
@@ -206,8 +206,12 @@ class RPI:
 
             except:
                 self.logger.error(f"Error parsing JSON: {msg_str}")
-                self.command_q.put(msg_str) #TO IMPROVE
-                self.logger.debug(f"put into command queue")
+                if msg_str.startswith('P'):
+                    self.unpause.set()
+                    self.command_q.put(msg_str) #TO IMPROVE
+                elif msg_str.startswith('m'):
+                    self.unpause.set()
+                    self.command_q.put(msg_str) #TO IMPROVE
                 continue
 
     def android_sender(self):
@@ -218,7 +222,10 @@ class RPI:
                 continue
             
             try:
-                self.AC.send(msg)
+                if type(msg) == android_msg or type(msg) == android_result:
+                    self.AC.send(msg)
+                else:
+                    self.AC.send_generic(msg)
             except OSError as e:
                 self.logger.error(f"Error sending to Android: {e}")
                 self.android_dropped.set()
@@ -301,16 +308,16 @@ class RPI:
                 int_portion = int(command[2:])  # This will be 20 (integer)
                 # str_portion = str(int_portion).zfill(3)
                 speed = str(int_portion)
-                if len(str(speed))==  2:
+                if int_portion <= 100:
                     self.STMC.send('m')
                     self.STMC.send(speed[0])
                     self.STMC.send(speed[1])
                     self.STMC.send('\r')
                 else:
                     self.STMC.send('m')
-                    self.STMC.send(int_portion[0])
-                    self.STMC.send(int_portion[1])
-                    self.STMC.send(int_portion[2])
+                    self.STMC.send(speed[0])
+                    self.STMC.send(speed[1])
+                    self.STMC.send(speed[2])
 
             elif command.startswith('R/'):
                 self.STMC.send('r')
@@ -328,7 +335,7 @@ class RPI:
                 int_portion = int(command[2:])  # This will be 20 (integer)
                 # str_portion = str(int_portion).zfill(3)
                 speed = str(int_portion)
-                if len(str(speed))==  2:
+                if int_portion <= 100:
                     self.STMC.send('w')
                     self.STMC.send(speed[0])
                     self.STMC.send(speed[1])
@@ -341,28 +348,29 @@ class RPI:
 
 
             elif command.startswith('LB'):
-                self.STMC.send('k')
+                self.STMC.send('t')
                 self.STMC.send('9')
                 self.STMC.send('0')
                 self.STMC.send('\r')
 
             elif command.startswith('RB'):
-                self.STMC.send('t')
+                self.STMC.send('k')
                 self.STMC.send('9')
                 self.STMC.send('0')
                 self.STMC.send('\r')
            
             
             elif command.startswith('P'):
-                self.STMC.send('m')
-                self.STMC.send('1')
-                self.STMC.send('\n')
-                self.STMC.send('\n')
-                # # obstacle_id_with_signal = command.replace("SNAP", "")                
-                # # result = snap_pic()
-                # # print("the result is is", result)
-                # self.rpi_action_q.put(PiAction(cat="snap", value=command[1:]))
-                   # # PiAction(cat="snap", value=obstacle_id_with_signal))
+                # self.STMC.send('m')
+                # self.STMC.send('1')
+                # self.STMC.send('\n')
+                # self.STMC.send('\n')
+                # obstacle_id_with_signal = command.replace("SNAP", "")                
+                # result = snap_pic()
+                # print("the result is is", result)
+                print("gonna try and snap pic")
+                self.rpi_action_q.put(PiAction(cat="snap", value=command[1:]))
+                   # PiAction(cat="snap", value=obstacle_id_with_signal))
 
             elif command.startswith("fin"): #(MY RETRYYY FUNCTON)
                 self.unpause.clear()
@@ -411,8 +419,12 @@ class RPI:
             
             # NOT YET IMPLEMENTED
             elif action.cat == "snap":
-                pass
-                # result = snap_pic()
+                result = snap_pic()
+                self.android_q.put(android_result(action.value, result))
+                print("the result is", result)
+                time.sleep(0.5)
+                self.movement_lock.release()
+
             #     self.snap_and_rec(obstacle_id_with_signal=action.value)
             # elif action.cat == "stitch":
             #     self.request_stitch()
@@ -594,6 +606,8 @@ class RPI:
         for c in commands:
             self.logger.info(f"Command Queue input: {c}")
             self.command_q.put(c)
+        
+        self.android_q.put(android_msg("status", "Algo Received!"))
         # for p in path[1:]:  # ignore first element as it is the starting position of the robot
         #     self.path_queue.put(p)
 
@@ -607,14 +621,14 @@ class RPI:
         # If error, then log, and send error to Android
         if response.status_code != 200:
             # Notify android
-            self.android_queue.put(android_msg(
+            self.android_q.put(android_msg(
                 "error", "Something went wrong when requesting stitch from the API."))
             self.logger.error(
                 "Something went wrong when requesting stitch from the API.")
             return
 
         self.logger.info("Images stitched!")
-        self.android_queue.put(android_msg("info", "Images stitched!"))
+        self.android_q.put(android_msg("info", "Images stitched!"))
 
     def clear_queues(self):
         """Clear both command and path queues"""

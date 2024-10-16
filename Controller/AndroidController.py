@@ -21,6 +21,22 @@ class android_msg:
     def jsonify(self) -> str:
         return json.dumps({"cat": self._cat, 
                            "msg": self.msg})
+    
+class android_result:
+    def __init__(self, obstacle_id: str, image_id: str):
+
+        self._obstacle_id = obstacle_id
+        self.image_id = image_id
+
+    def get_oid(self) -> str:
+        return self._obstacle_id
+    
+    def get_iid(self) -> str:
+        return self.image_id
+    
+    def jsonify(self) -> str:
+        return json.dumps({"obstacle_id": self._obstacle_id, 
+                           "image_id": self.image_id})
 
 class AndroidController(BaseController):
 
@@ -73,7 +89,8 @@ class AndroidController(BaseController):
             self.logger.error(f"Error disconnecting from Android: {e}")
             raise e
 
-    def send(self, msg:android_msg) -> None:
+    # def send(self, msg:android_msg) -> None:
+    def send(self, msg) -> None:
         try:
             self.client_socket.send(f"{msg.jsonify()}\n".encode("utf-8"))
             self.logger.debug(f"Sent to Android: {msg.jsonify()}")
@@ -82,6 +99,24 @@ class AndroidController(BaseController):
             self.logger.error(f"Error sending message to Android: {e}")
             raise e
         
+    # def send_result(self, msg:android_result) -> None:
+    #     try:
+    #         self.client_socket.send(f"{msg.jsonify()}\n".encode("utf-8"))
+    #         self.logger.debug(f"Sent to Android: {msg.jsonify()}")
+
+    #     except Exception as e:
+    #         self.logger.error(f"Error sending message to Android: {e}")
+    #         raise e
+        
+    def send_generic(self, msg: dict) -> None:
+        try:
+            proc_msg = json.dumps({next(iter(msg)):msg[next(iter(msg))]})
+            self.client_socket.send(f"{proc_msg}\n".encode("utf-8"))
+            self.logger.info(f"Sent generic dict to Android: {msg}")
+        except Exception as e:
+            self.logger.error(f"Error sending message to Android: {e}")
+            raise e
+            
     def receive(self) -> Optional[str]:
         try:
             data = self.client_socket.recv(1024)
