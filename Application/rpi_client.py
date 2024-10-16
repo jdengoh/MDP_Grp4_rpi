@@ -17,9 +17,10 @@ def snap_pic():
     camera = PiCamera()
 
     # Capture image
+    image_filename = f"/home/pi/{int(time.time())}.jpg"
     camera.start_preview()
     time.sleep(2)  # Camera warm-up time
-    camera.capture('/home/pi/captured_image.jpg')
+    camera.capture(image_filename)
     camera.stop_preview()
 
     # Send image to Flask server
