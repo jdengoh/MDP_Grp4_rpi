@@ -156,7 +156,7 @@ def predict_image(image, model, signal='C'):
             "Left": 39,
             "Up Arrow": 36,
             "Down Arrow": 37,
-            "right": 38,
+            "Right Arrow": 38,
             "Left Arrow": 39,
             "Stop": 40
         }
@@ -172,7 +172,7 @@ def predict_image(image, model, signal='C'):
     except Exception as e:
         print(f"Error occurred during prediction: {traceback.format_exc()}")
         print(f"Final result: NA")
-        return ['NA','NA']
+        return 'NA'
     
 def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     """
@@ -203,7 +203,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     """
     name_to_id = {
         "NA": 'NA',
-        "Bullseye": 'NA',
+        "Bullseye": 10,
         "one": 11,
         "two": 12,
         "three": 13,
@@ -235,7 +235,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
         "Left": 39,
         "Up Arrow": 36,
         "Down Arrow": 37,
-        "right": 38,
+        "Right Arrow": 38,
         "Left Arrow": 39,
         "Stop": 40
     }
@@ -251,7 +251,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
 
     # Save the raw image
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imwrite(f"results/raw/raw_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"Application/results/raw/raw_image_{label}_{rand}.jpg", img)
 
     # Draw the bounding box
     img = cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
@@ -261,7 +261,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), color, -1)
     img = cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
     # Save the annotated image
-    cv2.imwrite(f"own_results/annotated/annotated_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"Application/own_results/annotated/annotated_image_{label}_{rand}.jpg", img)
 
 # def live_rec():
 #     model = load_model()
