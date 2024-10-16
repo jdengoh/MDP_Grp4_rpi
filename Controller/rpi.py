@@ -201,6 +201,8 @@ class RPI:
                 elif msg_str.startswith('m'):
                     self.unpause.set()
                     self.command_q.put(msg_str) #TO IMPROVE
+                elif msg_str.startswith('fin'):
+                    self.request_stitch()
                 continue
 
     def android_sender(self):
