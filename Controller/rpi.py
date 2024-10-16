@@ -15,7 +15,6 @@ from STM32Controller import STM32Controller
 from MDP_rpi.Application.rpi_client import snap_pic
 # from consts import SYMBOL_MAP
 
-
 class PiAction:
     def __init__(self, cat: str, value: str):
         self.cat = cat
@@ -63,8 +62,6 @@ class RPI:
         self.obstacles = self.manager.dict()
         self.current_location = self.manager.dict()
         self.failed_attempt = False
-
-
     
     def start(self):
 
@@ -73,10 +70,8 @@ class RPI:
             self.AC.connect()
             self.android_q.put(android_msg('info', 
                                            'Connected to RPI!'))
-            
             # STM Connection
             self.STMC.connect()
-
             # Image Rec
             self.check_api()
 
@@ -96,7 +91,7 @@ class RPI:
 
 
             # Logging
-            self.logger.info("All Processes Successfully Started")
+            self.logger.info("START - All Processes Successfully Started")
             self.android_q.put(android_msg("info", "All Processes Successfully Started"))
             # self.android_q.put(android_msg("mode", "path" if self.robot_mode.value == 1 else "manual"))
             
@@ -110,22 +105,21 @@ class RPI:
     def stop(self):
         self.AC.disconnect()
         self.STMC.disconnect()
-        self.logger.info("All processes stopped")
-
+        self.logger.info("STOP - All processes stopped")
 
     def android_monitor(self):
 
-        self.logger.info("Monitoring Android")
+        self.logger.info("Android_M - Watching Android Connection")
 
         while True:
 
             # Wait for Android to drop
             self.android_dropped.wait()
 
-            self.logger.error("Android Disconnected!")
+            self.logger.error("Android_M - Android Disconnected!")
 
             # Stop and kill processes
-            self.logger.debug("Stopping all processes")
+            self.logger.debug("Android_M - Stopping all processes")
             self.proc_android_sender.kill()
             self.proc_android_recv.kill()
 
@@ -135,21 +129,21 @@ class RPI:
             assert self.proc_android_sender.is_alive() is False 
 
             self.AC.disconnect()
-            self.logger.debug("Processes stopped and killed")
+            self.logger.debug("Android_M - Processes stopped and killed")
 
             # Attempt to reconnect
-            self.logger.debug("Attempting to reconnect to Android")
+            self.logger.debug("Android_M - Attempting to reconnect to Android")
             self.AC.connect()
 
             # Restart processes
-            self.logger.debug("Restarting processes")
+            self.logger.debug("Android_M - Restarting processes")
             self.proc_android_recv = Process(target=self.android_recv)
             self.proc_android_sender = Process(target=self.android_sender)
 
             self.proc_android_recv.start()
             self.proc_android_sender.start()
 
-            self.logger.debug("Processes restarted")
+            self.logger.debug("Android_M - Processes restarted")
             self.android_q.put(android_msg("info", "You have been reconnected!"))
             self.android_q.put(android_msg("mode", "path"))
 
@@ -164,7 +158,7 @@ class RPI:
                 msg_str = self.AC.receive()
             except OSError as e:
                 self.android_dropped.set()
-                self.logger.error(f"Error receiving from Android: {e}")
+                self.logger.error(f"Android_R - Error receiving from Android: {e}")
             
             if msg_str is None:
                 continue
@@ -173,39 +167,34 @@ class RPI:
                 msg: dict = json.loads(msg_str)
                 if msg['cat'] == 'obstacles':
                     self.rpi_action_q.put(PiAction('obstacles', msg['value']))
-                    self.logger.info(f"Obstacles added to RPI Action Queue: {msg}")
+                    self.logger.info(f"Android_R - Obstacles added to RPI Action Queue: {msg}")
                 elif msg['cat'] == 'control':
                     if msg['value'] == 'start':
                         if not self.check_api():
-                            self.logger.error("API is down! Start command aborted.")
+                            self.logger.error("Android_R - API is down! Start command aborted.")
                             self.android_q.put(android_msg(
                                 'error', "API is down, start command aborted."))
 
                         if not self.command_q.empty():
-                            self.logger.info("Gryo reset!")
-                            # self.STMC.send("o")
-                            # self.STMC.send("1")
-                            # self.STMC.send("2")
-                            # self.STMC.send("3")
-
-                            # time.sleep(2)
+                            self.logger.info("Android_R - Command queue status: ok")
+                            # no gyro reset
                             self.unpause.set()
                             self.logger.info(
-                                "Start command received, starting robot on path!")
+                                "Android_R - Start command received, starting robot on path!")
                             # self.android_q.put(android_msg(
                             #     'info', 'Starting robot on path!'))
                             self.android_q.put(
                                 {"status":"running"})
                         else:
                             self.logger.warning(
-                                "The command queue is empty, please set obstacles.")
+                                "Android_R - The command queue is empty, please set obstacles.")
                             self.android_q.put(android_msg(
                                 "error", "Command queue is empty, did you set obstacles?"))
 
 
 
             except:
-                self.logger.error(f"Error parsing JSON: {msg_str}")
+                self.logger.error(f"Android_R - Error parsing JSON: {msg_str}")
                 if msg_str.startswith('P'):
                     self.unpause.set()
                     self.command_q.put(msg_str) #TO IMPROVE
@@ -227,7 +216,7 @@ class RPI:
                 else:
                     self.AC.send_generic(msg)
             except OSError as e:
-                self.logger.error(f"Error sending to Android: {e}")
+                self.logger.error(f"Android_S - Error sending to Android: {e}")
                 self.android_dropped.set()
 
     def stm32_recv(self) -> None:
@@ -240,52 +229,52 @@ class RPI:
             #     self.snap.set()
             # self.logger.info(f"{msg}")
             if msg.startswith("STAR"):
-                self.logger.info("STM32_RECV: STARR from STM32 received.")
-            
+                self.logger.info("STM32_RECV: 'STAR' from STM32 received.")
+                # reset, but no need do anything
+
             elif msg.startswith("DONE"):
-                self.logger.info("STM32_RECV: DONE from STM32 received.")
+                self.logger.info("STM32_RECV: 'DONE' from STM32 received.")
                 try:
-                    time.sleep(0.5)
                     self.movement_lock.release()
-                    # try:
-                    #     self.retrylock.release()
-                    # except:
-                    #     pass
-                    self.logger.debug(
-                        "STM32_RECV: ACK from STM32 received, movement lock released.")
+                    self.logger.debug("STM32_RECV: movement_lock released from 'DONE'")
+                    try:
+                        self.retrylock.release()
+                        self.logger.debug("STM32_RECV: rety_lock released")
 
-            #         cur_location = self.path_queue.get_nowait()
+                    except:
+                        pass
 
-            #         self.current_location['x'] = cur_location['x']
-            #         self.current_location['y'] = cur_location['y']
-            #         self.current_location['d'] = cur_location['d']
-            #         self.logger.info(
-            #             f"self.current_location = {self.current_location}")
-            #         self.android_queue.put(AndroidMessage('location', {
-            #             "x": cur_location['x'],
-            #             "y": cur_location['y'],
-            #             "d": cur_location['d'],
-            #         }))
+
+                    # cur_location = self.path_queue.get_nowait()
+
+                    # self.current_location['x'] = cur_location['x']
+                    # self.current_location['y'] = cur_location['y']
+                    # self.current_location['d'] = cur_location['d']
+                    # self.logger.info(
+                    #     f"self.current_location = {self.current_location}")
+                    # self.android_queue.put(android_msg('location', {
+                    #     "x": cur_location['x'],
+                    #     "y": cur_location['y'],
+                    #     "d": cur_location['d'],
+                    # }))
 
                 except Exception:
-                    self.logger.warning("Tried to release a released lock!")
+                    self.logger.warning("STM32_RECV: Tried to release a released lock!")
 
-            elif msg.startswith("ACK"):
+            elif msg.startswith("ACK"): # TO CHECK
                 if self.rs_flag == False:
                     self.rs_flag = True
-                    self.logger.debug("STM32_RECV: ACK for RS00 from STM32 received.")
+                    self.logger.info("STM32_RECV: 'DONE' from STM32 received.")
                     continue
                 
             else:
                 self.logger.warning(
                     f"Ignored unknown message from STM: {msg}")
-
-                
             
     def command_follower(self):
         while True:
             command: str = self.command_q.get()
-            self.logger.debug("wait for unpause")
+            self.logger.debug("Comm_F - wait for unpause")
 
             # try:
             #     self.logger.debug("wait for retrylock")
@@ -294,10 +283,10 @@ class RPI:
             # except:
             self.unpause.wait()
             
-            self.logger.debug("wait for movelock")
+            self.logger.debug("Comm_F - wait for movelock")
             # Acquire lock first (needed for both moving, and snapping pictures)
             self.movement_lock.acquire()
-            self.logger.debug("movelock acquired")
+            self.logger.debug("Comm_F - movelock acquired")
             # stm_32_prefixes = ("FS", "BS", "FW", "BW", "FL", "FR", "BL",
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
@@ -346,7 +335,6 @@ class RPI:
                     self.STMC.send(speed[1])
                     self.STMC.send(speed[2])
 
-
             elif command.startswith('LB'):
                 self.STMC.send('t')
                 self.STMC.send('9')
@@ -361,13 +349,6 @@ class RPI:
            
             
             elif command.startswith('P'):
-                # self.STMC.send('m')
-                # self.STMC.send('1')
-                # self.STMC.send('\n')
-                # self.STMC.send('\n')
-                # obstacle_id_with_signal = command.replace("SNAP", "")                
-                # result = snap_pic()
-                # print("the result is is", result)
                 print("gonna try and snap pic")
                 self.rpi_action_q.put(PiAction(cat="snap", value=command[1:]))
                    # PiAction(cat="snap", value=obstacle_id_with_signal))
@@ -380,6 +361,9 @@ class RPI:
                     "info", "Commands queue finished."))
                 self.android_q.put(android_msg("status", "finished"))
                 self.rpi_action_q.put(PiAction(cat="stitch", value=""))
+                self.request_stitch()
+                self.logger.info("Stitch completed!.")
+
 
             else:
                 raise Exception(f"Unknown command: {command}")
@@ -389,9 +373,6 @@ class RPI:
             # self.logger.info("Commands queue finished.")
             # self.android_q.put(android_msg("info", "Commands queue finished."))
             # self.android_q.put(android_msg("status", "finished"))
-
-
-
 
     def rpi_action(self):
         while True:
@@ -611,8 +592,6 @@ class RPI:
         # for p in path[1:]:  # ignore first element as it is the starting position of the robot
         #     self.path_queue.put(p)
 
-
-
     def request_stitch(self):
         """Sends a stitch request to the image recognition API to stitch the different images together"""
         url = f"http://{API_IP}:{API_PORT}/stitch"
@@ -634,11 +613,6 @@ class RPI:
         """Clear both command and path queues"""
         while not self.command_q.empty():
             self.command_q.get()
-
-
-            
-
-
 
 if __name__ == "__main__":
     rpi = RPI()
