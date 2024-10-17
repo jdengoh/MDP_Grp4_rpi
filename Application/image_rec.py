@@ -54,20 +54,16 @@ def predict_image(image, model, signal='C'):
 
         # Filter out Bullseye
         pred_list = df_results 
-        
-        # pred_list = pred_list[pred_list['name'] != 'Bullseye']
-        
+
         # Initialize prediction to NA
         pred = 'NA'
 
         # Ignore Bullseye unless they are the only image detected and select the last label in the list (the last label will be the one with the largest bbox height)
         if len(pred_list) == 1:
-            # if pred_list.iloc[0]['name'] != 'Bullseye':
             pred = pred_list.iloc[0]
 
         # If more than 1 label is detected
         elif len(pred_list) > 1:
-
             # More than 1 Symbol detected, filter by confidence and area
             pred_shortlist = []
             current_area = pred_list.iloc[0]['bboxArea']
@@ -78,7 +74,7 @@ def predict_image(image, model, signal='C'):
                     pred_shortlist.append(row)
                     # Update the current area to the area of the prediction
                     current_area = row['bboxArea']
-            
+
             # If only 1 prediction remains after filtering by confidence and area
             if len(pred_shortlist) == 1:
                 # Choose that prediction
@@ -87,18 +83,17 @@ def predict_image(image, model, signal='C'):
             # If multiple predictions remain after filtering by confidence and area
             else:
                 # Use signal of {signal} to filter further 
-                
                 # Sort the predictions by xmin
                 pred_shortlist.sort(key=lambda x: x['xmin'])
 
                 # If signal is 'L', choose the first prediction in the list, i.e. leftmost in the image
                 if signal == 'L':
                     pred = pred_shortlist[0]
-                
+
                 # If signal is 'R', choose the last prediction in the list, i.e. rightmost in the image
                 elif signal == 'R':
                     pred = pred_shortlist[-1]
-                
+
                 # If signal is 'C', choose the prediction that is central in the image
                 else:
                     # Loop through the predictions shortlist
@@ -107,15 +102,15 @@ def predict_image(image, model, signal='C'):
                         if pred_shortlist[i]['xmin'] > 250 and pred_shortlist[i]['xmin'] < 774:
                             pred = pred_shortlist[i]
                             break
-                    
+
                     # If no prediction is central, choose the one with the largest area
-                    if isinstance(pred,str):
+                    if isinstance(pred, str):
                         # Choosing one with largest area if none are central
                         pred_shortlist.sort(key=lambda x: x['bboxArea']) 
                         pred = pred_shortlist[-1]
-        
+
         # Draw the bounding box on the image
-        if not isinstance(pred,str):
+        if not isinstance(pred, str):
             draw_own_bbox(np.array(img), pred['xmin'], pred['ymin'], pred['xmax'], pred['ymax'], pred['name'])
 
         name_to_id = {
@@ -157,19 +152,17 @@ def predict_image(image, model, signal='C'):
             "Stop": 40
         }
         # If pred is not a string, i.e. a prediction was made and pred is not 'NA'
-        if not isinstance(pred,str):
+        if not isinstance(pred, str):
             image_id = str(name_to_id[pred['name']])
         else:
             image_id = 'NA'
         print(f"Final result: {image_id}")
-        return [image_id,pred['name']]
+        return [image_id, pred['name']]
     # If some error happened, we just return 'NA' so that the inference loop is closed
-
     except Exception as e:
         print(f"Error occurred during prediction: {traceback.format_exc()}")
         print(f"Final result: NA")
-        return ['NA','NA']
-    
+        return ['NA', 'NA']
 def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     """
     Draw bounding box on the image with text label and save both the raw and annotated image in the 'own_results' folder
@@ -303,10 +296,9 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
 
 
 
-
 def stitch_image():
     """
-    Stitches the images in the folder together and saves it into runs/stitched folder
+    Stitches the images in the folder together and saves it into runs/stitched folder in 2 rows
     """
     # Initialize path to save stitched image
     imgFolder = 'runs'
@@ -318,16 +310,27 @@ def stitch_image():
     images = [Image.open(x) for x in imgPaths]
     # Get the width and height of each image
     width, height = zip(*(i.size for i in images))
-    # Calculate the total width and max height of the stitched image, as we are stitching horizontally
-    total_width = sum(width)
-    max_height = max(height)
+
+    # Calculate the number of images per row (half of the total images)
+    num_images_per_row = len(images) // 2 + len(images) % 2
+
+    # Calculate the total width and max height of the stitched image
+    total_width = max(width) * num_images_per_row
+    max_height = max(height) * 2
+
+    # Create a new blank image with the calculated dimensions
     stitchedImg = Image.new('RGB', (total_width, max_height))
     x_offset = 0
+    y_offset = 0
 
-    # Stitch the images together
-    for im in images:
-        stitchedImg.paste(im, (x_offset, 0))
+    # Stitch the images together in 2 rows
+    for i, im in enumerate(images):
+        stitchedImg.paste(im, (x_offset, y_offset))
         x_offset += im.size[0]
+        if (i + 1) % num_images_per_row == 0:
+            x_offset = 0
+            y_offset += im.size[1]
+
     # Save the stitched image to the path
     stitchedImg.save(stitchedPath)
 
@@ -337,31 +340,46 @@ def stitch_image():
             "runs", "originals", os.path.basename(img)))
 
     return stitchedImg
+   
 
 def stitch_image_own():
     """
-    Stitches the images in the folder together and saves it into own_results folder
+    Stitches the images in the folder together and saves it into own_results folder in 2 rows
 
     Basically similar to stitch_image() but with different folder names and slightly different drawing of bounding boxes and text
     """
     imgFolder = 'own_results'
     stitchedPath = os.path.join(imgFolder, f'stitched-{int(time.time())}.jpeg')
 
-    imgPaths = glob.glob(os.path.join(imgFolder+"/annotated_image_*.jpg"))
+    imgPaths = glob.glob(os.path.join(imgFolder, "annotated", "annotated_image_*.jpg"))
     imgTimestamps = [imgPath.split("_")[-1][:-4] for imgPath in imgPaths]
     
     sortedByTimeStampImages = sorted(zip(imgPaths, imgTimestamps), key=lambda x: x[1])
 
     images = [Image.open(x[0]) for x in sortedByTimeStampImages]
     width, height = zip(*(i.size for i in images))
-    total_width = sum(width)
-    max_height = max(height)
+
+    # Calculate the number of images per row (half of the total images)
+    num_images_per_row = len(images) // 2 + len(images) % 2
+
+    # Calculate the total width and max height of the stitched image
+    total_width = max(width) * num_images_per_row
+    max_height = max(height) * 2
+
+    # Create a new blank image with the calculated dimensions
     stitchedImg = Image.new('RGB', (total_width, max_height))
     x_offset = 0
+    y_offset = 0
 
-    for im in images:
-        stitchedImg.paste(im, (x_offset, 0))
+    # Stitch the images together in 2 rows
+    for i, im in enumerate(images):
+        stitchedImg.paste(im, (x_offset, y_offset))
         x_offset += im.size[0]
+        if (i + 1) % num_images_per_row == 0:
+            x_offset = 0
+            y_offset += im.size[1]
+
+    # Save the stitched image to the path
     stitchedImg.save(stitchedPath)
 
     return stitchedImg
