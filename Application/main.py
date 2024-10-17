@@ -82,7 +82,8 @@ def send_command_data():
 def check_img():
     file = request.files['image']
     filename = file.filename
-    os.path
+    print("THE FILENAME IS: ",filename)
+    print(os.path.join('own_results/raw', filename))
     file.save(os.path.join('own_results/raw', filename))
     file_path = os.path.join('own_results/raw', filename)
 
@@ -99,7 +100,7 @@ def check_img():
     # image_id = predict_image_week_9(filename,model)
 
     
-    image_results = predict_image(filename,model)
+    image_results = predict_image(file_path,model)
 
     result = {
         # "obstacle_id": obstacle_id,

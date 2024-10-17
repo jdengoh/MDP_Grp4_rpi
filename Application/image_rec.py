@@ -31,7 +31,7 @@ def predict_image(image, model, signal='C'):
     try:
         # Load the image
         # print(os.path.join('uploads', image))
-        img = Image.open(os.path.join('own_results/raw', image))
+        img = Image.open(image)
 
         # img_tensor = preprocess_image(os.path.join('uploads', image))
         # print("open")
@@ -39,13 +39,9 @@ def predict_image(image, model, signal='C'):
         # Predict the image using the model
         results = model(img)
         
-
         # Images with predicted bounding boxes are saved in the runs folder
-
-        
         results.save('runs')
         print(results)
-
 
         # Convert the results to a pandas dataframe and calculate the height and width of the bounding box and the area of the bounding box
         df_results = results.pandas().xyxy[0]
