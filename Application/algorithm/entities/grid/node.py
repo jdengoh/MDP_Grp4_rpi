@@ -1,5 +1,3 @@
-import pygame
-
 from algorithm import settings
 from algorithm.entities.assets import colors
 from algorithm.entities.grid.position import Position
@@ -12,6 +10,9 @@ class Node:
         """
         self.pos = Position(x, y, direction)
         self.occupied = occupied
+        self.x = x
+        self.y = y
+        self.direction = direction
 
     def __str__(self):
         return f"Node({self.pos})"
@@ -29,38 +30,3 @@ class Node:
         Return a copy of this node.
         """
         return Node(self.pos.x, self.pos.y, self.occupied, self.pos.direction)
-
-    def draw_self(self, screen):
-        if self.occupied:  # If current node is not permissible to the robot
-            rect = pygame.Rect(0, 0, settings.GRID_CELL_LENGTH, settings.GRID_CELL_LENGTH)
-            rect.center = self.pos.xy_pygame()
-            pygame.draw.rect(screen, colors.CYAN, rect)
-
-    def draw_boundary(self, screen):
-        x_pygame, y_pygame = self.pos.xy_pygame()
-
-        left = x_pygame - settings.GRID_CELL_LENGTH // 2
-        right = x_pygame + settings.GRID_CELL_LENGTH // 2
-        top = y_pygame - settings.GRID_CELL_LENGTH // 2
-        bottom = y_pygame + settings.GRID_CELL_LENGTH // 2
-
-        # Draw
-        pygame.draw.line(screen, colors.GREY, (left, top), (left, bottom))  # Left border
-        pygame.draw.line(screen, colors.GREY, (left, top), (right, top))  # Top border
-        pygame.draw.line(screen, colors.GREY, (right, top), (right, bottom))  # Right border
-        pygame.draw.line(screen, colors.GREY, (left, bottom), (right, bottom))  # Bottom border
-
-    def draw(self, screen):
-        # Draw self
-        self.draw_self(screen)
-        # Draw node border
-        self.draw_boundary(screen)
-
-    def draw_start(self, screen):
-        # Draw self
-        if self.occupied:  # If current node is not permissible to the robot
-            rect = pygame.Rect(0, 0, settings.GRID_START_BOX_LENGTH, settings.GRID_START_BOX_LENGTH)
-            rect.center = self.pos.xy_pygame()
-            pygame.draw.rect(screen, colors.ORANGE, rect)
-        # Draw node border
-        self.draw_boundary(screen)

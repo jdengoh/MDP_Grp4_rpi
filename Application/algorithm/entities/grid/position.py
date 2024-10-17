@@ -30,12 +30,6 @@ class Position:
     def xy_dir(self):
         return *self.xy(), self.direction
 
-    def xy_pygame(self):
-        """
-        Return the x, y coordinates in terms of Pygame coordinates. Useful for drawing on screen.
-        """
-        return self.x, settings.GRID_LENGTH - self.y
-
     def copy(self):
         """
         Create a new copy of this Position.

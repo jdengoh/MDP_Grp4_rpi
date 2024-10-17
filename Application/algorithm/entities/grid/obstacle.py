@@ -1,10 +1,10 @@
-import pygame
-
+import math
+import time
 from algorithm import settings
 from algorithm.entities.assets import colors
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.grid.position import Position, RobotPosition
-
+import random
 
 class Obstacle:
     def __init__(self, x, y, direction, index):
@@ -23,12 +23,22 @@ class Obstacle:
         # Translate given coordinates to be in PyGame coordinates.
         self.pos = Position(x * settings.SCALING_FACTOR, y * settings.SCALING_FACTOR, direction)
 
-        # Arrow to draw at the target coordinate.
-        self.target_image = pygame.transform.scale(pygame.image.load("algorithm/entities/assets/target-arrow.png"),
-                                                   (50, 50))
-
+        self.x_cm = x
+        self.y_cm = y
         self.index = index
-
+        self.direction = direction
+        self.valid_targets = []
+        
+    def get_nearest_valid_target(self, pos: Position):
+        best_num = 100000
+        best_target = None
+        for target in self.valid_targets:
+            dis = abs(pos.x - target.x) + abs(pos.y - target.y)
+            if best_num > dis:
+                best_num = dis
+                best_target = target
+        return best_target
+    
     def __str__(self):
         return f"Obstacle({self.pos})"
 
@@ -38,6 +48,8 @@ class Obstacle:
         """
         Checks whether a given x-y coordinate is within the safety boundary of this obstacle.
         """
+        # d2 = (self.pos.x - x) ** 2 + (self.pos.y - y) ** 2
+        # return d2 <= settings.OBSTACLE_SAFETY_WIDTH ** 2
         if self.pos.x - settings.OBSTACLE_SAFETY_WIDTH < x < self.pos.x + settings.OBSTACLE_SAFETY_WIDTH and \
                 self.pos.y - settings.OBSTACLE_SAFETY_WIDTH < y < self.pos.y + settings.OBSTACLE_SAFETY_WIDTH:
             return True
@@ -62,6 +74,101 @@ class Obstacle:
             Position(right, upper)  # Upper right.
         ]
 
+    def get_all_possible_centers(self):
+        sensor_width=2592
+        sensor_height=1944
+        focal = 3.6 #mm
+        pixel_size=1.4
+
+        ratio_w = 1024/sensor_width
+        ratio_h = 1024/sensor_height
+        def get_uv(horizontal,height,vertical):
+            x = horizontal
+            y = height
+            z = vertical
+            f = focal #mm
+            theta = math.acos(abs(z)/math.sqrt(x*x+z*z)) # 
+            deg = math.degrees(theta)
+            # alpha = f/2.76 # vertical focal ratio, height
+            # beta = f/3.68 # horizontal focal ratio, width
+            e = 0.001
+            try:
+                u = f * (x/z - y*math.tan(theta)/z)
+            except:
+                u = f * x / z# projected horizontal on image plane
+            u /= (pixel_size*e) #  projected width pixel
+            
+            v = f * (y/(z*math.cos(theta))) # height pixel, using height
+            v /= pixel_size*e # f/z == projected_height/real_height
+            
+            v = 512-v*ratio_h # got flip up
+            u = 512+u*ratio_w
+            
+            # v = 512+v
+            return (u, v)
+
+
+        #horizontal = 0 #horizontal distance from camera to obstacle
+        #height = 120 #height of obstacle from camera
+        #vertical = 250 #distance from camera to obstacle (verticle, facing)
+        height = 50
+        possible_centers = []
+        
+        for i in range(settings.GRID_NUM_GRIDS):
+            for j in range(settings.GRID_NUM_GRIDS):
+                x = i*settings.GRID_CELL_LENGTH
+                y = j*settings.GRID_CELL_LENGTH
+                cen_dis = settings.GRID_CELL_LENGTH//2
+                x_mm = (x+cen_dis)*10/settings.SCALING_FACTOR
+                y_mm = (y+cen_dis)*10/settings.SCALING_FACTOR
+                
+                # print("xmm,ymm", x_mm, y_mm, self.x_cm * 10, self.y_cm * 10)
+                x_view = x_mm - self.x_cm * 10
+                y_view = y_mm - self.y_cm * 10
+                if self.direction == Direction.LEFT:
+                    if x_view > 0:
+                        continue
+                elif self.direction == Direction.RIGHT:
+                    if x_view < 0:
+                        continue
+                elif self.direction == Direction.TOP:
+                    if y_view < 0:
+                        continue
+                elif self.direction == Direction.BOTTOM:
+                    if y_view > 0:
+                        continue
+                x_view = abs(x_view)
+                y_view = abs(y_view)
+                if self.direction == Direction.TOP or self.direction == Direction.BOTTOM:
+                    if y_view < (settings.OBSTACLE_SAFETY_WIDTH + settings.OBSTACLE_LENGTH) * 10 / settings.SCALING_FACTOR + 10*10:
+                        continue
+                    if y_view < settings.minimum_vertical:
+                        continue
+                    u, v = get_uv(x_view, height, y_view)
+                else:
+                    if x_view < (settings.OBSTACLE_SAFETY_WIDTH + settings.OBSTACLE_LENGTH) * 10 / settings.SCALING_FACTOR + 10*10:
+                        continue
+                    if x_view < settings.minimum_vertical:
+                        continue
+                    u, v = get_uv(y_view, height, x_view)
+                # print(i, j, u, v, x_view, y_view)
+                if (u > settings.left_pixel_threshold and u < settings.right_pixel_threshold and v > 0 and v < 1024):
+                    if x_view > settings.maximum_vertical: #1m2
+                        continue
+                    if y_view > settings.maximum_vertical:
+                        continue
+                    
+                    x_grid = i * settings.GRID_CELL_LENGTH + settings.GRID_CELL_LENGTH//2
+                    y_grid = j * settings.GRID_CELL_LENGTH + settings.GRID_CELL_LENGTH//2
+                    possible_centers.append((x_grid, y_grid))
+        # print("="*50)
+        # print(self.pos)
+        # print(possible_centers)
+        # print("="*50)
+        # time.sleep(100)
+        return possible_centers
+                    
+
     def get_robot_target_pos(self):
         """
         Returns the point that the robot should target for, including the target orientation.
@@ -73,74 +180,28 @@ class Obstacle:
 
         The object will also store the angle that the robot should face.
         """
-        if self.pos.direction == Direction.TOP:
-            return RobotPosition(self.pos.x, self.pos.y + settings.OBSTACLE_SAFETY_WIDTH + settings.OBSTACLE_LENGTH, Direction.BOTTOM)
-        elif self.pos.direction == Direction.BOTTOM:
-            return RobotPosition(self.pos.x, self.pos.y - settings.OBSTACLE_SAFETY_WIDTH - settings.OBSTACLE_LENGTH, Direction.TOP)
-        elif self.pos.direction == Direction.LEFT:
-            return RobotPosition(self.pos.x - settings.OBSTACLE_SAFETY_WIDTH - settings.OBSTACLE_LENGTH, self.pos.y, Direction.RIGHT)
-        else:
-            return RobotPosition(self.pos.x + settings.OBSTACLE_SAFETY_WIDTH + settings.OBSTACLE_LENGTH, self.pos.y, Direction.LEFT)
-
-    def draw_self(self, screen):
-        # Draw the obstacle onto the grid.
-        # We need to translate the obstacle's center into that with respect to PyGame
-        # Get the coordinates of the grid's bottom left-hand corner.
-        rect = pygame.Rect(0, 0, settings.OBSTACLE_LENGTH, settings.OBSTACLE_LENGTH)
-        rect.center = self.pos.xy_pygame()
-        pygame.draw.rect(screen, colors.BLACK, rect)
-
-        # Draw the direction of the picture
-        rect.width = settings.OBSTACLE_LENGTH / 2
-        rect.height = settings.OBSTACLE_LENGTH / 2
-        rect.center = self.pos.xy_pygame()
-
-        if self.pos.direction == Direction.TOP:
-            rect.centery -= settings.OBSTACLE_LENGTH / 4
-        elif self.pos.direction == Direction.BOTTOM:
-            rect.centery += settings.OBSTACLE_LENGTH / 4
-        elif self.pos.direction == Direction.LEFT:
-            rect.centerx -= settings.OBSTACLE_LENGTH / 4
-        else:
-            rect.centerx += settings.OBSTACLE_LENGTH / 4
-
-        # Draw the picture place
-        pygame.draw.rect(screen, colors.ORANGE, rect)
-
-    def draw_virtual_boundary(self, screen):
-        # Get the boundary points
-        points = self.get_boundary_points()
-
-        # Draw left border
-        pygame.draw.line(screen, colors.BLUE, points[0].xy_pygame(), points[2].xy_pygame())
-        # Draw right border
-        pygame.draw.line(screen, colors.BLUE, points[1].xy_pygame(), points[3].xy_pygame())
-        # Draw upper border
-        pygame.draw.line(screen, colors.BLUE, points[2].xy_pygame(), points[3].xy_pygame())
-        # Draw lower border
-        pygame.draw.line(screen, colors.BLUE, points[0].xy_pygame(), points[1].xy_pygame())
-
-    def draw_robot_target(self, screen):
-        target = self.get_robot_target_pos()
-
-        rot_image = self.target_image
-        angle = 0
-        if target.direction == Direction.BOTTOM:
-            angle = 180
-        elif target.direction == Direction.LEFT:
-            angle = 90
-        elif target.direction == Direction.RIGHT:
-            angle = -90
-
-        rot_image = pygame.transform.rotate(rot_image, angle)
-        rect = rot_image.get_rect()
-        rect.center = target.xy_pygame()
-        screen.blit(rot_image, rect)
-
-    def draw(self, screen):
-        # Draw the obstacle itself.
-        self.draw_self(screen)
-        # Draw the obstacle's boundary.
-        self.draw_virtual_boundary(screen)
-        # Draw the target for this obstacle.
-        self.draw_robot_target(screen)
+        possible_targets = []
+        upper_bound = settings.upper_bound
+        lower_bound = settings.lower_bound
+        lower_bound_side = settings.lower_bound_side
+        upper_bound_side = settings.upper_bound_side
+        possible_centers = self.get_all_possible_centers()
+        for center in possible_centers:
+            if self.pos.direction == Direction.TOP:
+                possible_targets.append(RobotPosition(center[0], center[1], Direction.BOTTOM))
+            elif self.pos.direction == Direction.BOTTOM:
+                possible_targets.append(RobotPosition(center[0], center[1], Direction.TOP))
+            elif self.pos.direction == Direction.LEFT:
+                possible_targets.append(RobotPosition(center[0], center[1], Direction.RIGHT))
+            else:
+                possible_targets.append(RobotPosition(center[0], center[1], Direction.LEFT))
+        
+        valid_possible_targets = []
+        for target in possible_targets:
+            if target.x < 0 or target.y < 0 or target.x > settings.GRID_LENGTH or target.y > settings.GRID_LENGTH:
+                pass
+            else:
+                valid_possible_targets.append(target)
+        
+        return valid_possible_targets
+    

@@ -13,7 +13,7 @@ from typing import List
 import socket
 import pickle
 from algorithm import settings
-from algorithm.app import AlgoSimulator, AlgoMinimal
+from algorithm.app import AlgoMinimal
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.grid.obstacle import Obstacle
 
@@ -132,20 +132,32 @@ def algo():
     return jsonify(order_and_commands)
 
 
-def run_algo(obstacle_data):
-    obstacles = parse_obstacle_data(obstacle_data)
-    algo = AlgoMinimal(obstacles)
-    algo.init()
-    order = algo.execute()
-    commands = algo.robot.convert_all_commands()
-    print("Commands converted: " + str(commands))
-    print("Order: " + str(order))
-    order_and_commands = {
-        "order": order,
-        "commands": commands,
-        "path_hist": None
-    }
-    return order_and_commands
+def get_relative_pos(obstacles, targets):
+    results = []
+    for i in range(len(obstacles)):
+        ob = obstacles[i]
+        target = targets[i]
+        ob_x = ob.x_cm 
+        ob_y = ob.y_cm
+        camera_x = target.x // settings.SCALING_FACTOR
+        camera_y = target.y // settings.SCALING_FACTOR
+        if ob.direction == Direction.TOP:
+            horizontal = camera_x - ob_x
+            vertical = abs(camera_y - ob_y)
+        elif ob.direction == Direction.BOTTOM:
+            horizontal = ob_x - camera_x
+            vertical = abs(camera_y - ob_y)
+        elif ob.direction == Direction.LEFT:
+            horizontal = camera_y - ob_y
+            vertical = abs(camera_x - ob_x)
+        elif ob.direction == Direction.RIGHT:
+            horizontal = ob_y - camera_y
+            vertical = abs(camera_x - ob_x)
+        
+        # print(" get relative pos", ob, target, ob.direction)
+        # print(f"realtive position camera {camera_x} {camera_y}, obstacle {ob_x}, {ob_y}")
+        results.append([horizontal*10, vertical*10])
+    return results
 
 
 def parse_obstacle_data(data: dict) -> List[Obstacle]:
@@ -164,6 +176,35 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
         print(obstacle)
     
     return obstacle_list
+
+
+def run_algo(obstacle_data):
+    st = time.time() # start to receive the obstacle
+    obstacles = parse_obstacle_data(obstacle_data)
+    app = AlgoMinimal(obstacles)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    print("order", order)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    print("Commands:" + str(commands))
+    print("Order: " + str(order))
+    
+    ed = time.time()
+    print("Time to received the commands from beginning of received obstacles", ed-st)
+    
+    order_and_commands = {
+        "order": order,
+        "commands": commands,
+        "path_hist": None
+    }
+    return order_and_commands
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
