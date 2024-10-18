@@ -47,6 +47,29 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
     
     return obstacle_list
 
+def obstacle_optimizer(obstacles: dict) -> dict:
+    # Obstacle Optimizer
+    print("Old Obstacles:", obstacles)
+    
+    # Iterate over each obstacle
+    for key, value in obstacles.items():
+        x, y, direction, _ = value
+        # Check the direction and apply changes based on conditions
+        if direction == 180 and x in [40, 50]:  # If direction is left (180), and x is 40 or 50
+            x = 60  # Set x to 60
+        elif direction == 0 and x in [150, 160]:  # If direction is right (0), and x is 150 or 160
+            x = 140  # Set x to 140
+        elif direction == 90 and y in [150, 160]:  # If direction is up (90), and y is 150 or 160
+            y = 140  # Set y to 140
+        elif direction == -90 and y in [40, 50]:  # If direction is down (-90), and y is 40 or 50
+            y = 60  # Set y to 60
+        
+        # Update the obstacle values in the dictionary
+        obstacles[key] = [x, y, direction, value[3]]
+
+    print("New obstacles:", obstacles)
+    return obstacles
+
 def run_simulator():
     # Fill in obstacle positions with respect to lower bottom left corner.
     # (x-coordinate, y-coordinate, Direction, index)
@@ -67,6 +90,8 @@ def run_simulator():
     #     "4": [150, 30, 180, 4],
     #     "5": [150, 160, 180, 5]
     # }
+    
+    obstacles = obstacle_optimizer(obstacles)
     
     st = time.time() # start to receive the obstacle
     obs = parse_obstacle_data(obstacles)
