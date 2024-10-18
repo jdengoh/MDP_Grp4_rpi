@@ -35,15 +35,15 @@ ROBOT_SCAN_TIME = 2  # Time provided for scanning an obstacle image in seconds.
 
 # Grid Attributes
 GRID_LENGTH = 200 * SCALING_FACTOR
-GRID_CELL_LENGTH = 5 * SCALING_FACTOR
+GRID_CELL_LENGTH = 5 * SCALING_FACTOR # how much the robot can overextend the border
 GRID_START_BOX_LENGTH = 30 * SCALING_FACTOR
 GRID_NUM_GRIDS = GRID_LENGTH // GRID_CELL_LENGTH
 
 # Obstacle Attributes
 OBSTACLE_LENGTH = 10 * SCALING_FACTOR
 # OBSTACLE_SAFETY_WIDTH = ROBOT_SAFETY_DISTANCE // 3 * 3  # With respect to the center of the obstacle
-OBSTACLE_SAFETY_WIDTH = 25 * SCALING_FACTOR # plus 10 from the center of the obstacle, but actual landed position, depends on the original position of the robot
-OBSTACLE_TARGET_DISTANCE = 32 * SCALING_FACTOR
+OBSTACLE_SAFETY_WIDTH = 10 * SCALING_FACTOR # (original 25) plus 10 from the center of the obstacle, but actual landed position, depends on the original position of the robot
+OBSTACLE_TARGET_DISTANCE = 32 * SCALING_FACTOR # (original 32)
 # if the robot is at the center of the obstacle, the robot will be safety+10-5 away from the obstacle
 
 # Path Finding Attributes
