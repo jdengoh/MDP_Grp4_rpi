@@ -11,8 +11,9 @@ from algorithm.entities.grid.grid import Grid
 from algorithm.entities.grid.node import Node
 from algorithm.entities.grid.position import RobotPosition
 
+
 class ModifiedAStar:
-    def __init__(self, grid, brain, start: RobotPosition, possible_ends: List[RobotPosition], target_index):
+    def __init__(self, grid, brain, start: RobotPosition, possible_ends: List[RobotPosition], target_index:int):
         # We use a copy of the grid rather than use a reference
         # to the exact grid.
         self.grid = grid
@@ -44,7 +45,8 @@ class ModifiedAStar:
         ]
         for c in straight_commands:
             # Check if doing this command does not bring us to any invalid position.
-            after, p = self.check_valid_command(c, pos) #! Heavy, pos is current position, c is command, after is new position
+            after, p = self.check_valid_command(c,
+                                                pos)  # ! Heavy, pos is current position, c is command, after is new position
             if after:
                 travel_weight = c.dist
                 neighbours.append((after, p, straight_dist, c))
@@ -59,7 +61,7 @@ class ModifiedAStar:
         ]
         for c in turn_commands:
             # Check if doing this command does not bring us to any invalid position.
-            after, p = self.check_valid_command(c, pos) #! Heavy
+            after, p = self.check_valid_command(c, pos)  # ! Heavy
             if after:
                 neighbours.append((after, p, turn_penalty, c))
         return neighbours
@@ -129,7 +131,6 @@ class ModifiedAStar:
             y_d = self.possible_xy[i][1] - curr_pos.y
             t = min(t, abs(x_d) + abs(y_d))
         return t
-
 
     def start_astar(self, get_target=False):
         frontier = PriorityQueue()  # Store frontier nodes to travel to.
