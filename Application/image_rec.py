@@ -26,143 +26,91 @@ def load_model():
                            source='local')
     return model
 
-
 def predict_image(image, model, signal='C'):
     try:
         # Load the image
-        # print(os.path.join('uploads', image))
         img = Image.open(image)
-
-        # img_tensor = preprocess_image(os.path.join('uploads', image))
-        # print("open")
 
         # Predict the image using the model
         results = model(img)
         
-        # Images with predicted bounding boxes are saved in the runs folder
         results.save('runs')
         print(results)
 
-        # Convert the results to a pandas dataframe and calculate the height and width of the bounding box and the area of the bounding box
+        # Convert the results to a pandas dataframe and calculate the height, width, and area of the bounding box
         df_results = results.pandas().xyxy[0]
         df_results['bboxHt'] = df_results['ymax'] - df_results['ymin']
         df_results['bboxWt'] = df_results['xmax'] - df_results['xmin']
         df_results['bboxArea'] = df_results['bboxHt'] * df_results['bboxWt']
 
-        # Label with largest bbox height will be last
+        # Sort by bounding box area, largest first
         df_results = df_results.sort_values('bboxArea', ascending=False)
 
-        # Filter out Bullseye
-        pred_list = df_results 
-
-        # Initialize prediction to NA
+        # Filter out 'Bullseye' and initialize prediction to 'NA'
+        pred_list = df_results
         pred = 'NA'
 
-        # Ignore Bullseye unless they are the only image detected and select the last label in the list (the last label will be the one with the largest bbox height)
+        # If only one prediction, select it
         if len(pred_list) == 1:
             pred = pred_list.iloc[0]
-
-        # If more than 1 label is detected
+        # If more than one label is detected, apply further logic to select the best prediction
         elif len(pred_list) > 1:
-            # More than 1 Symbol detected, filter by confidence and area
             pred_shortlist = []
             current_area = pred_list.iloc[0]['bboxArea']
-            # For each prediction, check if the confidence is greater than 0.5 and if the area is greater than 80% of the current area or 60% if the prediction is 'One'
+            
+            # Filter by confidence and area
             for _, row in pred_list.iterrows():
-                if row['name'] != 'Bullseye' and row['confidence'] > 0.8 and ((current_area * 0.8 <= row['bboxArea']) or (row['name'] == 'One' and current_area * 0.6 <= row['bboxArea'])):
-                    # Add the prediction to the shortlist
+                if row['name'] != 'Bullseye' and row['confidence'] > 0.7 and \
+                        ((current_area * 0.8 <= row['bboxArea']) or \
+                        (row['name'] == 'One' and current_area * 0.6 <= row['bboxArea'])):
                     pred_shortlist.append(row)
-                    # Update the current area to the area of the prediction
                     current_area = row['bboxArea']
 
-            # If only 1 prediction remains after filtering by confidence and area
-            if len(pred_shortlist) == 1:
-                # Choose that prediction
-                pred = pred_shortlist[0]
+            # Select based on the signal and other conditions
+            # if len(pred_shortlist) == 1:
+            pred = pred_shortlist[0]
+            # else:
+            #     pred_shortlist.sort(key=lambda x: x['xmin'])
 
-            # If multiple predictions remain after filtering by confidence and area
-            else:
-                # Use signal of {signal} to filter further 
-                # Sort the predictions by xmin
-                pred_shortlist.sort(key=lambda x: x['xmin'])
+            #     if signal == 'L':
+            #         pred = pred_shortlist[0]
+            #     elif signal == 'R':
+            #         pred = pred_shortlist[-1]
+            #     else:  # 'C' for central
+            #         for i in range(len(pred_shortlist)):
+            #             if 250 < pred_shortlist[i]['xmin'] < 774:
+            #                 pred = pred_shortlist[i]
+            #                 break
+            #         if isinstance(pred, str):
+            #             pred_shortlist.sort(key=lambda x: x['bboxArea'])
+            #             pred = pred_shortlist[-1]
 
-                # If signal is 'L', choose the first prediction in the list, i.e. leftmost in the image
-                if signal == 'L':
-                    pred = pred_shortlist[0]
-
-                # If signal is 'R', choose the last prediction in the list, i.e. rightmost in the image
-                elif signal == 'R':
-                    pred = pred_shortlist[-1]
-
-                # If signal is 'C', choose the prediction that is central in the image
-                else:
-                    # Loop through the predictions shortlist
-                    for i in range(len(pred_shortlist)):
-                        # If the xmin of the prediction is between 250 and 774, i.e. the center of the image, choose that prediction
-                        if pred_shortlist[i]['xmin'] > 250 and pred_shortlist[i]['xmin'] < 774:
-                            pred = pred_shortlist[i]
-                            break
-
-                    # If no prediction is central, choose the one with the largest area
-                    if isinstance(pred, str):
-                        # Choosing one with largest area if none are central
-                        pred_shortlist.sort(key=lambda x: x['bboxArea']) 
-                        pred = pred_shortlist[-1]
-
-        # Draw the bounding box on the image
+        # Draw the selected bounding box on the image
         if not isinstance(pred, str):
             draw_own_bbox(np.array(img), pred['xmin'], pred['ymin'], pred['xmax'], pred['ymax'], pred['name'])
-
+            print(f"Selected prediction: {pred['name']}")
+        
+        # Return the selected prediction as per the logic
         name_to_id = {
-            "NA": 'NA',
-            "Bullseye": 10,
-            "one": 11,
-            "two": 12,
-            "three": 13,
-            "four": 14,
-            "five": 15,
-            "six": 16,
-            "seven": 17,
-            "eight": 18,
-            "nine": 19,
-            "A": 20,
-            "B": 21,
-            "C": 22,
-            "D": 23,
-            "E": 24,
-            "F": 25,
-            "G": 26,
-            "H": 27,
-            "S": 28,
-            "T": 29,
-            "U": 30,
-            "V": 31,
-            "W": 32,
-            "X": 33,
-            "Y": 34,
-            "Z": 35,
-            "Up": 36,
-            "Down": 37,
-            "Right": 38,
-            "Left": 39,
-            "Up Arrow": 36,
-            "Down Arrow": 37,
-            "right": 38,
-            "Left Arrow": 39,
-            "Stop": 40
+            "NA": 'NA', "Bullseye": 10, "one": 11, "two": 12, "three": 13, "four": 14,
+            "five": 15, "six": 16, "seven": 17, "eight": 18, "nine": 19, "A": 20,
+            "B": 21, "C": 22, "D": 23, "E": 24, "F": 25, "G": 26, "H": 27,
+            "S": 28, "T": 29, "U": 30, "V": 31, "W": 32, "X": 33, "Y": 34,
+            "Z": 35, "Up": 36, "Down": 37, "Right": 38, "Left": 39,
+            "Up Arrow": 36, "Down Arrow": 37, "right": 38, "Left Arrow": 39, "Stop": 40
         }
-        # If pred is not a string, i.e. a prediction was made and pred is not 'NA'
         if not isinstance(pred, str):
             image_id = str(name_to_id[pred['name']])
         else:
             image_id = 'NA'
         print(f"Final result: {image_id}")
         return [image_id, pred['name']]
-    # If some error happened, we just return 'NA' so that the inference loop is closed
+    
     except Exception as e:
         print(f"Error occurred during prediction: {traceback.format_exc()}")
         print(f"Final result: NA")
         return ['NA', 'NA']
+
 def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     """
     Draw bounding box on the image with text label and save both the raw and annotated image in the 'own_results' folder
@@ -305,7 +253,8 @@ def stitch_image():
     stitchedPath = os.path.join(imgFolder, f'stitched-{int(time.time())}.jpeg')
 
     # Find all files that ends with ".jpg" (this won't match the stitched images as we name them ".jpeg")
-    imgPaths = glob.glob(os.path.join(imgFolder+"/detect/*/", "*.jpg"))
+    # imgPaths = glob.glob(os.path.join(imgFolder+"/detect/*/", "*.jpg"))
+    imgPaths = glob.glob(os.path.join('own_results/annotated/', "*.jpg"))
     # Open all images
     images = [Image.open(x) for x in imgPaths]
     # Get the width and height of each image
@@ -337,7 +286,7 @@ def stitch_image():
     # Move original images to "originals" subdirectory
     for img in imgPaths:
         shutil.move(img, os.path.join(
-            "runs", "originals", os.path.basename(img)))
+            "own_results", "old", os.path.basename(img)))
 
     return stitchedImg
    
