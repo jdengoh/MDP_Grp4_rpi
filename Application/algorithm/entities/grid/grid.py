@@ -25,26 +25,32 @@ class Grid:
             for y in range(800):
                 # Safe is true
                 self.cache[(x, y)] = True
-                
-                check = True
-                for obstacle in self.obstacles:
-                    if x - settings.OBSTACLE_SAFETY_WIDTH < obstacle.pos.x < x + settings.OBSTACLE_SAFETY_WIDTH and \
-                            y - settings.OBSTACLE_SAFETY_WIDTH < obstacle.pos.y < y + settings.OBSTACLE_SAFETY_WIDTH:
-                        if obstacle.check_within_boundary(x, y):
-                            check = False
-                            break
-                self.cache[(x, y)] = check
-                if check is False:
-                    continue
-                
-                # Check if position too close to the border.
-                # NOTE: We allow the robot to overextend the border a little!
-                # We do this by setting the limit to be GRID_CELL_LENGTH rather than ROBOT_SAFETY_DISTANCE
-                if (y < settings.GRID_CELL_LENGTH or
-                    y > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH) or \
-                        (x < settings.GRID_CELL_LENGTH or
-                        x > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH):
-                    self.cache[(x, y)] = False
+
+        for obstacle in self.obstacles:
+            obstacle_x = obstacle.pos.x
+            obstacle_y = obstacle.pos.y
+            safety_radius = settings.OBSTACLE_SAFETY_WIDTH
+
+            # Iterate through the grid points and mark those within the safety radius as invalid
+            for x in range(800):
+                for y in range(800):
+                    distance = ((x - obstacle_x) ** 2 + (y - obstacle_y) ** 2) ** 0.5
+                    if distance < safety_radius:
+                        self.cache[(x,y)]=False
+
+        # Check if position too close to the border.
+        # NOTE: We allow the robot to overextend the border a little!
+        # We do this by setting the limit to be GRID_CELL_LENGTH rather than ROBOT_SAFETY_DISTANCE
+        if (y < settings.GRID_CELL_LENGTH or
+            y > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH) or \
+                (x < settings.GRID_CELL_LENGTH or
+                x > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH):
+            self.cache[(x, y)] = False
+
+        for x in range(800):
+            for y in range(800):
+                if x<30 or x>770 or y<30 or y>770:
+                    self.cache[(x,y)] = True
 
     def generate_nodes(self):
         """

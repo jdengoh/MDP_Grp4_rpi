@@ -70,7 +70,73 @@ def obstacle_optimizer(obstacles: dict) -> dict:
     print("New obstacles:", obstacles)
     return obstacles
 
-def command_optimizer(commands: List) -> List:
+def draw_validity_grid(grid):
+    """
+    Function to draw the grid using Matplotlib to show valid (free) and invalid areas for each obstacle grid.
+    """
+    # Create a directory for saving grid images if it doesn't exist
+    output_folder = "grid"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
+    ax.set_xlim(0, settings.WINDOW_SIZE[0])
+    ax.set_ylim(0, settings.WINDOW_SIZE[1])
+    ax.set_title(f"Grid Verification - Validity Visualization")
+
+    # Draw nodes, color based on validity
+    for x in range(0, settings.WINDOW_SIZE[0], settings.GRID_CELL_LENGTH):
+        for y in range(0, settings.WINDOW_SIZE[1], settings.GRID_CELL_LENGTH):
+            if grid.cache.get((x, y)) is False:
+                color = 'red'  # Invalid area
+            else:
+                color = 'lightgray'  # Valid area
+            rect = plt.Rectangle((x, y), settings.GRID_CELL_LENGTH, settings.GRID_CELL_LENGTH, color=color, fill=True, edgecolor='black')
+            ax.add_patch(rect)
+
+    plt.gca().invert_yaxis()  # Invert y-axis to match typical grid orientation
+    filename = f"validity_grid_visualization_obstacle.png"
+    plt.savefig(os.path.join(output_folder, filename))
+    plt.show()
+
+def run_simulator():
+    # Fill in obstacle positions with respect to lower bottom left corner.
+    # (x-coordinate, y-coordinate, Direction, index)
+    obstacles = {
+        "0": [0, 130, -90, 0],
+        "1": [0, 190, 0, 1],
+        "2": [70, 50, -90, 2], # problematic one
+        "3": [80, 140, 0, 3],
+        "4": [130, 80, 180, 4],
+        "5": [190, 0, 90, 5],
+        "6": [190, 190, -90, 6]
+    }
+    # obstacles = {
+    #     "0": [40, 100, 90, 0],
+    #     "1": [70, 170, -90, 1],
+    #     "2": [170, 100, -90, 2],
+    #     "3": [110, 70, 180, 3],
+    #     "4": [150, 30, 180, 4],
+    #     "5": [150, 160, 180, 5]
+    # }
+    
+    obstacles = obstacle_optimizer(obstacles)
+    
+    st = time.time() # start to receive the obstacle
+    obs = parse_obstacle_data(obstacles)
+    app = AlgoMinimal(obs)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    print("Commands:" + str(commands))
+    
     # Command optimization
     i = 0
     while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
