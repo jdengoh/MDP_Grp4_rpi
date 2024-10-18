@@ -123,7 +123,7 @@ def predict_image(image, model, signal='C'):
             "B": 21, "C": 22, "D": 23, "E": 24, "F": 25, "G": 26, "H": 27,
             "S": 28, "T": 29, "U": 30, "V": 31, "W": 32, "X": 33, "Y": 34,
             "Z": 35, "Up": 36, "Down": 37, "Right": 38, "Left": 39,
-            "Up Arrow": 36, "Down Arrow": 37, "right": 38, "left": 39, "Stop": 40
+            "up": 36, "down": 37, "right": 38, "left": 39, "circle": 40
         }
         if not isinstance(pred, str):
             image_id = str(name_to_id[pred['name']])
@@ -196,11 +196,11 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
         "Down": 37,
         "Right": 38,
         "Left": 39,
-        "Up Arrow": 36,
-        "Down Arrow": 37,
+        "up": 36,
+        "down": 37,
         "right": 38,
         "left": 39,
-        "Stop": 40
+        "circle": 40
     }
     # Reformat the label to {label name}-{label id}
     label = label + "-" + str(name_to_id[label])
