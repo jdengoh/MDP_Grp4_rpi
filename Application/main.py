@@ -242,7 +242,7 @@ def run_algo(obstacle_data):
     st = time.time() # start to receive the obstacle
     
     # Obstacle Optimizer
-    obstacle_data = obstacle_optimizer(obstacle_data) # comment out if breaks code
+    # obstacle_data = obstacle_optimizer(obstacle_data) # comment out if breaks code
     
     obstacles = parse_obstacle_data(obstacle_data)
     app = AlgoMinimal(obstacles)
