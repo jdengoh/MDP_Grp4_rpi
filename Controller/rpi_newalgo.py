@@ -299,7 +299,7 @@ class RPI:
                 int_portion = int(command[2:])  # This will be 20 (integer)
                 # str_portion = str(int_portion).zfill(3)
                 speed = str(int_portion)
-                if int_portion <= 100:
+                if int_portion < 100:
                     self.STMC.send('m')
                     self.STMC.send(speed[0])
                     self.STMC.send(speed[1])
