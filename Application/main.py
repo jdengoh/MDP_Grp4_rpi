@@ -200,26 +200,7 @@ def obstacle_optimizer(obstacles: dict) -> dict:
     print("New obstacles:", obstacles)
     return obstacles
 
-def run_algo(obstacle_data):
-    st = time.time() # start to receive the obstacle
-    
-    # Obstacle Optimizer
-    obstacle_data = obstacle_optimizer(obstacle_data)
-    
-    obstacles = parse_obstacle_data(obstacle_data)
-    app = AlgoMinimal(obstacles)
-    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
-    # obstacles_ordered = []
-    # for index in order:
-    #     for obstacle in obstacles:
-    #         if index == obstacle.index:
-    #             obstacles_ordered.append(obstacle)
-    print("order", order)
-    # print("obstacle after ordered", obstacles_ordered)
-    # targets = get_relative_pos(obstacles_ordered, app.targets)
-    commands = app.robot.convert_all_commands()
-    print("Commands:" + str(commands))
-    
+def command_optimizer(commands: List) -> List:
     # Command optimization
     i = 0
     while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
@@ -255,7 +236,29 @@ def run_algo(obstacle_data):
                 pass  # Skip if there is a non-numeric value
 
         i += 1
+    return commands
+
+def run_algo(obstacle_data):
+    st = time.time() # start to receive the obstacle
     
+    # Obstacle Optimizer
+    obstacle_data = obstacle_optimizer(obstacle_data) # comment out if breaks code
+    
+    obstacles = parse_obstacle_data(obstacle_data)
+    app = AlgoMinimal(obstacles)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    print("order", order)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    
+    print("Commands:" + str(commands))
+    commands = command_optimizer(commands) # comment out if breaks code
     print("Nommands:" + str(commands))
     print("Order: " + str(order))
     
