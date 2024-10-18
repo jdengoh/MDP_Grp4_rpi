@@ -86,30 +86,42 @@ def predict_image(image, model, signal='C'):
             pred = 'NA'
             print("==============================================")
 
-            # Select based on the signal and other conditions
-            if len(pred_shortlist) == 1:
-                print("************** ENTERING IF(pred_shortlist == 1) **************")
-                pred = pred_shortlist[0]
-                print("**************************************************************")
+            # Check if both 'five' and 'circle' are in the prediction list
+            five_pred = next((row for row in pred_shortlist if row['name'] == 'five'), None)
+            circle_pred = next((row for row in pred_shortlist if row['name'] == 'circle'), None)
 
+            if five_pred and circle_pred:
+                # If both are detected, compare their confidence
+                confidence_diff = abs(five_pred['confidence'] - circle_pred['confidence'])
+                if confidence_diff < 0.20:
+                    # If the confidence difference is less than 0.20, predict 'five'
+                    pred = five_pred
+                    print("************** Choosing 'five' based on confidence difference **************")
             else:
-                print("************** ENTERING ELSE **************")
-
-                pred_shortlist.sort(key=lambda x: x['xmin'])
-
-                if signal == 'L':
-                    print("CHOOSE L OK???")
+                # Select based on the signal and other conditions
+                if len(pred_shortlist) == 1:
+                    print("************** ENTERING IF(pred_shortlist == 1) **************")
                     pred = pred_shortlist[0]
-                elif signal == 'R':
-                    pred = pred_shortlist[-1]
-                else:  # 'C' for central
-                    for i in range(len(pred_shortlist)):
-                        if 250 < pred_shortlist[i]['xmin'] < 774:
-                            pred = pred_shortlist[i]
-                            break
-                    if isinstance(pred, str):
-                        pred_shortlist.sort(key=lambda x: x['bboxArea'])
+                    print("**************************************************************")
+
+                else:
+                    print("************** ENTERING ELSE **************")
+
+                    pred_shortlist.sort(key=lambda x: x['xmin'])
+
+                    if signal == 'L':
+                        print("CHOOSE L OK???")
+                        pred = pred_shortlist[0]
+                    elif signal == 'R':
                         pred = pred_shortlist[-1]
+                    else:  # 'C' for central
+                        for i in range(len(pred_shortlist)):
+                            if 250 < pred_shortlist[i]['xmin'] < 774:
+                                pred = pred_shortlist[i]
+                                break
+                        if isinstance(pred, str):
+                            pred_shortlist.sort(key=lambda x: x['bboxArea'])
+                            pred = pred_shortlist[-1]
 
         # Draw the selected bounding box on the image
         if not isinstance(pred, str):
