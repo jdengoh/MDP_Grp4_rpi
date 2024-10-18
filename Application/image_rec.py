@@ -18,7 +18,7 @@ import pandas
 def load_model():
     current_path = os.path.dirname(os.path.abspath(__file__))
     yolo5_path = os.path.join(current_path, 'yolov5')
-    pt_path = os.path.join(current_path, 'best (17).pt')
+    pt_path = os.path.join(current_path, 'best (19).pt')
 
     model = torch.hub.load(yolo5_path,
                            'custom',
@@ -202,7 +202,10 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
         "left": 39,
         "circle": 40
     }
+
+    
     # Reformat the label to {label name}-{label id}
+
     label = label + "-" + str(name_to_id[label])
     # Convert the coordinates to int
     x1 = int(x1)
@@ -222,6 +225,8 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
     # Print the text  
     img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), color, -1)
+    if label == "circle":
+        label="stop"
     img = cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
     # Save the annotated image
     cv2.imwrite(f"own_results/annotated/annotated_image_{label}_{rand}.jpg", img)
