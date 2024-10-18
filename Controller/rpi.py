@@ -198,8 +198,17 @@ class RPI:
                 if msg_str.startswith('P'):
                     self.unpause.set()
                     self.command_q.put(msg_str) #TO IMPROVE
+
                 elif msg_str.startswith('m'):
                     self.unpause.set()
+
+                    self.command_q.put(msg_str) #TO IMPROVE
+                elif msg_str.startswith('R/'):
+                    self.unpause.set()
+
+                elif msg_str.startswith('L/'):
+                    self.unpause.set()
+                
                     self.command_q.put(msg_str) #TO IMPROVE
                 elif msg_str.startswith('fin'):
                     self.request_stitch()
@@ -266,7 +275,7 @@ class RPI:
             elif msg.startswith("ACK"): # TO CHECK
                 if self.rs_flag == False:
                     self.rs_flag = True
-                    self.logger.info("STM32_RECV: 'DONE' from STM32 received.")
+                    self.logger.info("STM32_RECV: 'ACK' from STM32 received.")
                     continue
                 
             else:
@@ -293,6 +302,7 @@ class RPI:
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
             # pre = ['S', 'B', 'L', 'R'] # todo
+            time.sleep(0.5)
 
             if command.startswith('S/'):
                 # command[2:4]

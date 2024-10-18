@@ -266,7 +266,7 @@ class RPI:
             elif msg.startswith("ACK"): # TO CHECK
                 if self.rs_flag == False:
                     self.rs_flag = True
-                    self.logger.info("STM32_RECV: 'DONE' from STM32 received.")
+                    self.logger.info("STM32_RECV: 'ACK' from STM32 received.")
                     continue
                 
             else:
@@ -293,6 +293,7 @@ class RPI:
             #                   "BR", "TL", "TR", "A", "C", "DT", "STOP", "ZZ", "RS")
                               
             # pre = ['S', 'B', 'L', 'R'] # todo
+            time.sleep(0.5)
 
             if command.startswith('SF'):
                 # command[2:4]
