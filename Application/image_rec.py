@@ -18,7 +18,7 @@ import pandas
 def load_model():
     current_path = os.path.dirname(os.path.abspath(__file__))
     yolo5_path = os.path.join(current_path, 'yolov5')
-    pt_path = os.path.join(current_path, 'best (9).pt')
+    pt_path = os.path.join(current_path, 'best (17).pt')
 
     model = torch.hub.load(yolo5_path,
                            'custom',
@@ -48,11 +48,19 @@ def predict_image(image, model, signal='C'):
 
         # Filter out 'Bullseye' and initialize prediction to 'NA'
         pred_list = df_results
+
+        print()
+        print("************** PRED LIST **************")
+        print(pred_list)
+        print("****************************************")
         pred = 'NA'
 
         # If only one prediction, select it
         if len(pred_list) == 1:
+            print("*********** Case 1: only 1 PRED ***********")
             pred = pred_list.iloc[0]
+            print("*******************************************")
+
         # If more than one label is detected, apply further logic to select the best prediction
         elif len(pred_list) > 1:
             pred_shortlist = []
@@ -60,30 +68,48 @@ def predict_image(image, model, signal='C'):
             
             # Filter by confidence and area
             for _, row in pred_list.iterrows():
-                if row['name'] != 'Bullseye' and row['confidence'] > 0.7 and \
-                        ((current_area * 0.8 <= row['bboxArea']) or \
-                        (row['name'] == 'One' and current_area * 0.6 <= row['bboxArea'])):
+                print("************** Case 2: ITERROWS TIME **************")
+                # and (current_area * 0.8 <= row['bboxArea'])
+                
+                if row['name'] != 'Bullseye' and (row['confidence'] > 0.8 or \
+                                                  (row['name'] in ['F', 'G', 'H', 'Y'] and row['confidence'] >= 0.75) or \
+                                                    (row['name'] == 'One' and current_area * 0.6 <= row['bboxArea'])):
+                    print("=============== APPENDING STHING ===============")
+                    print(row)
+                    print("===============================================")
                     pred_shortlist.append(row)
                     current_area = row['bboxArea']
+                    print("+++++++++++++++ APPENDING STHING +++++++++++++++")
+# ------------------------------------------------------------------------------------------------------------ #
+            print("=============== PRED SHORTLIST ===============")
+            print(pred_shortlist)
+            pred = 'NA'
+            print("==============================================")
 
             # Select based on the signal and other conditions
-            # if len(pred_shortlist) == 1:
-            pred = pred_shortlist[0]
-            # else:
-            #     pred_shortlist.sort(key=lambda x: x['xmin'])
+            if len(pred_shortlist) == 1:
+                print("************** ENTERING IF(pred_shortlist == 1) **************")
+                pred = pred_shortlist[0]
+                print("**************************************************************")
 
-            #     if signal == 'L':
-            #         pred = pred_shortlist[0]
-            #     elif signal == 'R':
-            #         pred = pred_shortlist[-1]
-            #     else:  # 'C' for central
-            #         for i in range(len(pred_shortlist)):
-            #             if 250 < pred_shortlist[i]['xmin'] < 774:
-            #                 pred = pred_shortlist[i]
-            #                 break
-            #         if isinstance(pred, str):
-            #             pred_shortlist.sort(key=lambda x: x['bboxArea'])
-            #             pred = pred_shortlist[-1]
+            else:
+                print("************** ENTERING ELSE **************")
+
+                pred_shortlist.sort(key=lambda x: x['xmin'])
+
+                if signal == 'L':
+                    print("CHOOSE L OK???")
+                    pred = pred_shortlist[0]
+                elif signal == 'R':
+                    pred = pred_shortlist[-1]
+                else:  # 'C' for central
+                    for i in range(len(pred_shortlist)):
+                        if 250 < pred_shortlist[i]['xmin'] < 774:
+                            pred = pred_shortlist[i]
+                            break
+                    if isinstance(pred, str):
+                        pred_shortlist.sort(key=lambda x: x['bboxArea'])
+                        pred = pred_shortlist[-1]
 
         # Draw the selected bounding box on the image
         if not isinstance(pred, str):
@@ -97,7 +123,7 @@ def predict_image(image, model, signal='C'):
             "B": 21, "C": 22, "D": 23, "E": 24, "F": 25, "G": 26, "H": 27,
             "S": 28, "T": 29, "U": 30, "V": 31, "W": 32, "X": 33, "Y": 34,
             "Z": 35, "Up": 36, "Down": 37, "Right": 38, "Left": 39,
-            "Up Arrow": 36, "Down Arrow": 37, "right": 38, "Left Arrow": 39, "Stop": 40
+            "Up Arrow": 36, "Down Arrow": 37, "right": 38, "left": 39, "Stop": 40
         }
         if not isinstance(pred, str):
             image_id = str(name_to_id[pred['name']])
@@ -173,7 +199,7 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
         "Up Arrow": 36,
         "Down Arrow": 37,
         "right": 38,
-        "Left Arrow": 39,
+        "left": 39,
         "Stop": 40
     }
     # Reformat the label to {label name}-{label id}
