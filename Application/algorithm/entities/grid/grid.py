@@ -18,33 +18,42 @@ class Grid:
         self.cache = dict()
         self.fill_cache()
         self.nodes = self.generate_nodes()
+        print("Grid initialized with obstacles:", obstacles)
+        if not self.obstacles:
+            print("Warning: No obstacles were initialized in the grid.")
 
     # @profile
     def fill_cache(self):
-        for x in range(800):
-            for y in range(800):
-                # Safe is true
-                self.cache[(x, y)] = True
-                
-                check = True
-                for obstacle in self.obstacles:
-                    if x - settings.OBSTACLE_SAFETY_WIDTH < obstacle.pos.x < x + settings.OBSTACLE_SAFETY_WIDTH and \
-                            y - settings.OBSTACLE_SAFETY_WIDTH < obstacle.pos.y < y + settings.OBSTACLE_SAFETY_WIDTH:
-                        if obstacle.check_within_boundary(x, y):
-                            check = False
-                            break
-                self.cache[(x, y)] = check
-                if check is False:
-                    continue
-                
-                # Check if position too close to the border.
-                # NOTE: We allow the robot to overextend the border a little!
-                # We do this by setting the limit to be GRID_CELL_LENGTH rather than ROBOT_SAFETY_DISTANCE
-                if (y < settings.GRID_CELL_LENGTH or
-                    y > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH) or \
-                        (x < settings.GRID_CELL_LENGTH or
-                        x > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH):
-                    self.cache[(x, y)] = False
+        """
+        Fill the cache to mark valid and invalid positions in the grid.
+        Each obstacle has its own cache with positions marked as valid (True) or invalid (False).
+        If the obstacle is the target obstacle, a different safety radius is used.
+        """
+        # Initialize cache as a dictionary of dictionaries
+        self.cache = {}
+        for target_obstacle_index, _ in enumerate(self.obstacles):
+            obstacle_cache = {}
+            for x in range(0, settings.WINDOW_SIZE[0], settings.GRID_CELL_LENGTH):
+                for y in range(0, settings.WINDOW_SIZE[1], settings.GRID_CELL_LENGTH):
+                    obstacle_cache[(x, y)] = True
+
+            for obstacle_index, obstacle in enumerate(self.obstacles):
+                obstacle_x = obstacle.x_cm * settings.SCALING_FACTOR
+                obstacle_y = obstacle.y_cm * settings.SCALING_FACTOR
+
+                # Use different safety distances for the target obstacle
+                if obstacle_index == target_obstacle_index:
+                    safety_radius = settings.OBSTACLE_TARGET_DISTANCE
+                else:
+                    safety_radius = settings.OBSTACLE_SAFETY_WIDTH
+
+                # Iterate through the grid points and mark those within the safety radius as invalid
+                for x in range(0, settings.WINDOW_SIZE[0], settings.GRID_CELL_LENGTH):
+                    for y in range(0, settings.WINDOW_SIZE[1], settings.GRID_CELL_LENGTH):
+                        distance = ((x - obstacle_x) ** 2 + (y - obstacle_y) ** 2) ** 0.5
+                        if distance < safety_radius:
+                            obstacle_cache[(x, y)] = False
+            self.cache[target_obstacle_index] = obstacle_cache
 
     def generate_nodes(self):
         """
@@ -98,7 +107,6 @@ class Grid:
         if self.cache.get((int(pos.x), int(pos.y))) is not None:
             return self.cache[(int(pos.x), int(pos.y))]
         else:
-
             return False
     
     def check_valid_sight(self, view, target_obstacle):
@@ -160,4 +168,22 @@ class Grid:
         """
         distance = distance_to_segment(x_view, y_view, x_target, y_target, x_obstacle, y_obstacle)
         return distance <= threshold
+
+    def is_in_target_direction(self, x, y, target_position: Position, direction: int, target_distance: int):
+        if direction == 0:  # Right
+            target_x = target_position.x + target_distance
+            target_y = target_position.y
+        elif direction == 90:  # Up
+            target_x = target_position.x
+            target_y = target_position.y + target_distance
+        elif direction == 180:  # Left
+            target_x = target_position.x - target_distance
+            target_y = target_position.y
+        elif direction == -90:  # Down
+            target_x = target_position.x
+            target_y = target_position.y - target_distance
+        else:
+            return False
+
+        return (x - target_x) ** 2 + (y - target_y) ** 2 < target_distance ** 2
     

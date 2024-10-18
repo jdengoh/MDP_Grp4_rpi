@@ -12,12 +12,12 @@ from algorithm.entities.grid.node import Node
 from algorithm.entities.grid.position import RobotPosition
 
 class ModifiedAStar:
-    def __init__(self, grid, brain, start: RobotPosition, possible_ends: List[RobotPosition]):
+    def __init__(self, grid, brain, start: RobotPosition, possible_ends: List[RobotPosition], target_index):
         # We use a copy of the grid rather than use a reference
         # to the exact grid.
         self.grid = grid
         self.nodes = self.grid.nodes
-        self.cache = self.grid.cache
+        self.cache = self.grid.cache[target_index]
         self.brain = brain
 
         self.start = start
@@ -129,7 +129,7 @@ class ModifiedAStar:
             y_d = self.possible_xy[i][1] - curr_pos.y
             t = min(t, abs(x_d) + abs(y_d))
         return t
-    
+
 
     def start_astar(self, get_target=False):
         frontier = PriorityQueue()  # Store frontier nodes to travel to.
@@ -151,7 +151,7 @@ class ModifiedAStar:
         frontier.put((0, offset, (start_node, self.start)))  # Extra time parameter to tie-break same priority.
         cost[start_node] = 0
         backtrack[start_node] = (None, None)  # Parent, Command
-        
+
         while not frontier.empty():  # While there are still nodes to process.
             priority, _, (current_node, current_position) = frontier.get()
             for i, goal_node in enumerate(goal_nodes):

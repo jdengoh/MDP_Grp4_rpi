@@ -27,7 +27,7 @@ class Robot:
 
         self.brain = Brain(self, grid)
         self.path_hist = []  # Stores the history of the path taken by the robot.
-
+        print("Robot initialized with grid")
 
     def get_current_pos(self):
         return self.pos
@@ -50,7 +50,7 @@ class Robot:
                 total_dist += int(parts[2])
 
                 tmpcmd = tmpcmd+"S"
-                
+
                 if parts[1] == "0": # reverse
                     tmpcmd = tmpcmd + "B"
                 elif parts[1] == "1": # forward
@@ -70,16 +70,16 @@ class Robot:
                     tmpcmd = tmpcmd + "B"
                 elif parts[1] == "1": # forward
                     tmpcmd = tmpcmd + "F"
-                
+
                 tmpcmd = tmpcmd + parts[2]
 
             if command == "stop":
                 tmpcmd = "P"
-            
+
             # if "LF" in tmpcmd or "RF" in tmpcmd:
             #     modified_commands.append("SF008")
             modified_commands.append(tmpcmd)
-                
+
         string_commands.append("finish")
         modified_commands.append("finish")
         print("total_dist =", total_dist)

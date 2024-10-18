@@ -352,8 +352,30 @@ class RPI:
             
             elif command.startswith('P'):
                 print("gonna try and snap pic")
-                self.rpi_action_q.put(PiAction(cat="snap", value=command[1:]))
-                   # PiAction(cat="snap", value=obstacle_id_with_signal))
+                try:
+                    self.rpi_action_q.put(PiAction(cat="snap", value=command[1:]))
+                    # PiAction(cat="snap", value=obstacle_id_with_signal))
+                except("no image"):
+                    self.STMC.send('t')
+                    self.STMC.send('1')
+                    self.STMC.send('5')
+                    self.STMC.send('\r')
+                    try:
+                        self.rpi.rpi_action_q.put(PiAction(cat="pic", value=command[1:]))
+                    except("no image"):
+                        self.STMC.send('r')
+                        self.STMC.send('1')
+                        self.STMC.send('5')
+                        self.STMC.send('\r')
+                        self.STMC.send('k')
+                        self.STMC.send(command[3])
+                        self.STMC.send(command[4])
+                        self.STMC.send('\r')
+                        self.rpi.rpi_action_q.put(PiAction(cat="pic", value=command[1:]))
+
+
+
+
 
             elif command.startswith("fin"): #(MY RETRYYY FUNCTON)
                 self.unpause.clear()
