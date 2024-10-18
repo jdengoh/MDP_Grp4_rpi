@@ -90,7 +90,7 @@ def predict_image(image, model, signal='C'):
             five_pred = next((row for row in pred_shortlist if row['name'] == 'five'), None)
             circle_pred = next((row for row in pred_shortlist if row['name'] == 'circle'), None)
 
-            if five_pred and circle_pred:
+            if five_pred is not None and circle_pred is not None:
                 # If both are detected, compare their confidence
                 confidence_diff = abs(five_pred['confidence'] - circle_pred['confidence'])
                 if confidence_diff < 0.20:
