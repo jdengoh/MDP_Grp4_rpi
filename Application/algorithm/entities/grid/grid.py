@@ -47,6 +47,11 @@ class Grid:
                 x > settings.GRID_LENGTH - settings.GRID_CELL_LENGTH):
             self.cache[(x, y)] = False
 
+        for x in range(800):
+            for y in range(800):
+                if x<30 or x>770 or y<30 or y>770:
+                    self.cache[(x,y)] = True
+
     def generate_nodes(self):
         """
         Generate the nodes for this grid.
