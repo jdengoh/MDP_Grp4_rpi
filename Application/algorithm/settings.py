@@ -37,7 +37,7 @@ ROBOT_LEFT_S_FACTOR = (ROBOT_LENGTH / ROBOT_LEFT_TURN_RADIUS_X + ROBOT_LENGTH / 
 ROBOT_RIGHT_S_FACTOR = (ROBOT_LENGTH / ROBOT_RIGHT_TURN_RADIUS_X + ROBOT_LENGTH / ROBOT_RIGHT_TURN_RADIUS_Y)/2
 ROBOT_START_POSITION_X = 15 * SCALING_FACTOR
 ROBOT_START_POSITION_Y = 15 * SCALING_FACTOR
-ROBOT_SAFETY_DISTANCE = 25 * SCALING_FACTOR # original 15
+ROBOT_SAFETY_DISTANCE = 15 * SCALING_FACTOR
 ROBOT_SCAN_TIME = 2  # Time provided for scanning an obstacle image in seconds.
 
 # Grid Attributes
@@ -49,7 +49,7 @@ GRID_NUM_GRIDS = GRID_LENGTH // GRID_CELL_LENGTH
 # Obstacle Attributes
 OBSTACLE_LENGTH = 10 * SCALING_FACTOR
 # OBSTACLE_SAFETY_WIDTH = ROBOT_SAFETY_DISTANCE // 3 * 3  # With respect to the center of the obstacle
-OBSTACLE_SAFETY_WIDTH = 15 * SCALING_FACTOR # (original 25) plus 10 from the center of the obstacle, but actual landed position, depends on the original position of the robot
+OBSTACLE_SAFETY_WIDTH = 25 * SCALING_FACTOR # (original 25) plus 10 from the center of the obstacle, but actual landed position, depends on the original position of the robot
 OBSTACLE_TARGET_DISTANCE = 32 * SCALING_FACTOR
 # if the robot is at the center of the obstacle, the robot will be safety+10-5 away from the obstacle
 
@@ -70,7 +70,7 @@ upper_bound_side=10
 
 peak_horizontal_tolerance = 15
 minimum_vertical = 500
-maximum_vertical = 700# mm
-angle_peak_threshold = 8 # degree
+maximum_vertical = 700 # mm
+angle_peak_threshold = 8 # (original 8) degree
 left_pixel_threshold = 200
 right_pixel_threshold = 800
