@@ -50,27 +50,23 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
 def run_simulator():
     # Fill in obstacle positions with respect to lower bottom left corner.
     # (x-coordinate, y-coordinate, Direction, index)
-    # obstacles = [[105, 75, 90, 0], [175, 25, 180, 1], [175, 175, 180, 2], [75, 125, 180, 3], [15, 185, -90, 4], [65, 25, 180, 5], [85, 185, -90, 6], [185, 95, 180, 7]]
-    # obstacles = [[100,70,90,0],[170,20,180,1],[170,170,180,2],[70,120,180,3]]
-    # obstacles = [[100,70,-90,0],[170,20,180,1],[170,170,180,2],[70,120,180,3],[40,20,0,4]]
-    # obstacles = {
-    #     "0": [100, 70, -90, 0],
-    #     "1": [170, 20, 180, 1],
-    #     "2": [170, 170, 180, 2],
-    #     "3": [70, 120, 180, 3],
-    #     "4": [40, 20, 0, 4],
-    #     "5": [150, 30, 180, 5],
-    #     "6": [150, 160, 180, 6],
-    #     "7": [40, 100, 90, 7],
-    # }
     obstacles = {
-        "0": [40, 100, 90, 0],
-        "1": [70, 170, -90, 1],
-        "2": [170, 100, -90, 2],
-        "3": [110, 70, 180, 3],
-        "4": [150, 30, 180, 4],
-        "5": [150, 160, 180, 5]
+        "0": [0, 130, -90, 0],
+        "1": [0, 190, 0, 1],
+        "2": [70, 50, -90, 2], # problematic one
+        "3": [80, 140, 0, 3],
+        "4": [130, 80, 180, 4],
+        "5": [190, 0, 90, 5],
+        "6": [190, 190, -90, 6]
     }
+    # obstacles = {
+    #     "0": [40, 100, 90, 0],
+    #     "1": [70, 170, -90, 1],
+    #     "2": [170, 100, -90, 2],
+    #     "3": [110, 70, 180, 3],
+    #     "4": [150, 30, 180, 4],
+    #     "5": [150, 160, 180, 5]
+    # }
     
     st = time.time() # start to receive the obstacle
     obs = parse_obstacle_data(obstacles)
@@ -85,6 +81,44 @@ def run_simulator():
     # targets = get_relative_pos(obstacles_ordered, app.targets)
     commands = app.robot.convert_all_commands()
     print("Commands:" + str(commands))
+    
+    # Command optimization
+    i = 0
+    while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
+        # Check for LFxxx -> P -> LBxxx -> LF090 case
+        if commands[i].startswith('LF') and commands[i + 1] == 'P' and commands[i + 2].startswith('LB') and commands[i + 3] == 'LF090':
+            # Extract the number from LBxxx and make sure LFxxx and LBxxx have matching distances
+            try:
+                dist1 = int(commands[i][2:])  # LFxxx -> extract xxx
+                dist2 = int(commands[i + 2][2:])  # LBxxx -> extract xxx
+                if dist1 == dist2:  # Ensure distances match
+                    # Replace LBxxx with modified LFxxx
+                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # LFxxx becomes LF(90-xxx)
+                    commands[i + 2] = new_command
+                    # Remove LF090
+                    commands.pop(i + 3)
+                    continue  # Stay on the current index to check for adjacent sequences
+            except ValueError:
+                pass  # Skip if there is a non-numeric value
+
+        # Check for RFxxx -> P -> RBxxx -> RF090 case
+        elif commands[i].startswith('RF') and commands[i + 1] == 'P' and commands[i + 2].startswith('RB') and commands[i + 3] == 'RF090':
+            try:
+                dist1 = int(commands[i][2:])  # RFxxx -> extract xxx
+                dist2 = int(commands[i + 2][2:])  # RBxxx -> extract xxx
+                if dist1 == dist2:  # Ensure distances match
+                    # Replace RBxxx with modified RFxxx
+                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # RFxxx becomes RF(90-xxx)
+                    commands[i + 2] = new_command
+                    # Remove RF090
+                    commands.pop(i + 3)
+                    continue  # Stay on the current index to check for adjacent sequences
+            except ValueError:
+                pass  # Skip if there is a non-numeric value
+
+        i += 1
+    
+    print("Nommands:" + str(commands))
     print("Order: ", order)
     
     ed = time.time()
