@@ -16,6 +16,7 @@ from algorithm import settings
 from algorithm.app import AlgoMinimal
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.grid.obstacle import Obstacle
+from algorithm.entities.grid.grid import Grid
 
 #from model import *
 # from helper import command_generator
@@ -228,29 +229,9 @@ def obstacle_optimizer(obstacles: dict) -> dict:
     print("New obstacles:", obstacles)
     return obstacles
 
-def run_algo(obstacle_data):
-    st = time.time() # start to receive the obstacle
-    
-    # Obstacle Optimizer
-    obstacle_data = obstacle_optimizer(obstacle_data)
-    
-    obstacles = parse_obstacle_data(obstacle_data)
-    app = AlgoMinimal(obstacles)
-    grid = Grid(obstacles)
-    draw_validity_grid(grid)
-    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
-    # obstacles_ordered = []
-    # for index in order:
-    #     for obstacle in obstacles:
-    #         if index == obstacle.index:
-    #             obstacles_ordered.append(obstacle)
-    print("order", order)
-    # print("obstacle after ordered", obstacles_ordered)
-    # targets = get_relative_pos(obstacles_ordered, app.targets)
-    commands = app.robot.convert_all_commands()
-    print("Commands:" + str(commands))
-    
-    # Command optimization
+def command_optimizer(commands: list) -> list:
+     # Remove unnecessary commands by merging LFxxx -> P -> LBxxx -> LF090 and RFxxx -> P -> RBxxx -> RF090 sequences
+    print("Old Commands:" + str(commands))
     i = 0
     while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
         # Check for LFxxx -> P -> LBxxx -> LF090 case
@@ -285,8 +266,30 @@ def run_algo(obstacle_data):
                 pass  # Skip if there is a non-numeric value
 
         i += 1
+    print("New Commands:" + str(commands))
+    return commands
+
+def run_algo(obstacle_data):
+    st = time.time() # start to receive the obstacle
     
-    print("Nommands:" + str(commands))
+    # Obstacle Optimizer
+    obstacle_data = obstacle_optimizer(obstacle_data)
+    
+    obstacles = parse_obstacle_data(obstacle_data)
+    app = AlgoMinimal(obstacles)
+    grid = Grid(obstacles)
+    # draw_validity_grid(grid)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    print("order", order)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    commands = command_optimizer(commands)
     print("Order: " + str(order))
     
     ed = time.time()

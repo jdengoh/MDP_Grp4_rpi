@@ -70,6 +70,46 @@ def obstacle_optimizer(obstacles: dict) -> dict:
     print("New obstacles:", obstacles)
     return obstacles
 
+def command_optimizer(commands: list) -> list:
+     # Remove unnecessary commands by merging LFxxx -> P -> LBxxx -> LF090 and RFxxx -> P -> RBxxx -> RF090 sequences
+    print("Old Commands:" + str(commands))
+    i = 0
+    while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
+        # Check for LFxxx -> P -> LBxxx -> LF090 case
+        if commands[i].startswith('LF') and commands[i + 1] == 'P' and commands[i + 2].startswith('LB') and commands[i + 3] == 'LF090':
+            # Extract the number from LBxxx and make sure LFxxx and LBxxx have matching distances
+            try:
+                dist1 = int(commands[i][2:])  # LFxxx -> extract xxx
+                dist2 = int(commands[i + 2][2:])  # LBxxx -> extract xxx
+                if dist1 == dist2:  # Ensure distances match
+                    # Replace LBxxx with modified LFxxx
+                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # LFxxx becomes LF(90-xxx)
+                    commands[i + 2] = new_command
+                    # Remove LF090
+                    commands.pop(i + 3)
+                    continue  # Stay on the current index to check for adjacent sequences
+            except ValueError:
+                pass  # Skip if there is a non-numeric value
+
+        # Check for RFxxx -> P -> RBxxx -> RF090 case
+        elif commands[i].startswith('RF') and commands[i + 1] == 'P' and commands[i + 2].startswith('RB') and commands[i + 3] == 'RF090':
+            try:
+                dist1 = int(commands[i][2:])  # RFxxx -> extract xxx
+                dist2 = int(commands[i + 2][2:])  # RBxxx -> extract xxx
+                if dist1 == dist2:  # Ensure distances match
+                    # Replace RBxxx with modified RFxxx
+                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # RFxxx becomes RF(90-xxx)
+                    commands[i + 2] = new_command
+                    # Remove RF090
+                    commands.pop(i + 3)
+                    continue  # Stay on the current index to check for adjacent sequences
+            except ValueError:
+                pass  # Skip if there is a non-numeric value
+
+        i += 1
+    print("New Commands:" + str(commands))
+    return commands
+
 def draw_validity_grid(grid):
     """
     Function to draw the grid using Matplotlib to show valid (free) and invalid areas for each obstacle grid.
@@ -121,7 +161,8 @@ def run_simulator():
     #     "5": [150, 160, 180, 5]
     # }
     
-    obstacles = obstacle_optimizer(obstacles)
+
+    obstacles = obstacle_optimizer(obstacles) # optimize the obstacles
     
     st = time.time() # start to receive the obstacle
     obs = parse_obstacle_data(obstacles)
@@ -135,49 +176,12 @@ def run_simulator():
     # print("obstacle after ordered", obstacles_ordered)
     # targets = get_relative_pos(obstacles_ordered, app.targets)
     commands = app.robot.convert_all_commands()
-    print("Commands:" + str(commands))
     
-    # Command optimization
-    i = 0
-    while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
-        # Check for LFxxx -> P -> LBxxx -> LF090 case
-        if commands[i].startswith('LF') and commands[i + 1] == 'P' and commands[i + 2].startswith('LB') and commands[i + 3] == 'LF090':
-            # Extract the number from LBxxx and make sure LFxxx and LBxxx have matching distances
-            try:
-                dist1 = int(commands[i][2:])  # LFxxx -> extract xxx
-                dist2 = int(commands[i + 2][2:])  # LBxxx -> extract xxx
-                if dist1 == dist2:  # Ensure distances match
-                    # Replace LBxxx with modified LFxxx
-                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # LFxxx becomes LF(90-xxx)
-                    commands[i + 2] = new_command
-                    # Remove LF090
-                    commands.pop(i + 3)
-                    continue  # Stay on the current index to check for adjacent sequences
-            except ValueError:
-                pass  # Skip if there is a non-numeric value
-
-        # Check for RFxxx -> P -> RBxxx -> RF090 case
-        elif commands[i].startswith('RF') and commands[i + 1] == 'P' and commands[i + 2].startswith('RB') and commands[i + 3] == 'RF090':
-            try:
-                dist1 = int(commands[i][2:])  # RFxxx -> extract xxx
-                dist2 = int(commands[i + 2][2:])  # RBxxx -> extract xxx
-                if dist1 == dist2:  # Ensure distances match
-                    # Replace RBxxx with modified RFxxx
-                    new_command = commands[i][:2] + str(90 - dist2).zfill(3)  # RFxxx becomes RF(90-xxx)
-                    commands[i + 2] = new_command
-                    # Remove RF090
-                    commands.pop(i + 3)
-                    continue  # Stay on the current index to check for adjacent sequences
-            except ValueError:
-                pass  # Skip if there is a non-numeric value
-
-        i += 1
-    
-    print("Nommands:" + str(commands))
+    commands = command_optimizer(commands) # remove the unnecessary commands
     print("Order: ", order)
     
     ed = time.time()
-    print("time to received the commands from beginning of received obstacles", ed-st)
+    print("Time to received the commands from beginning of received obstacles", ed-st)
 
 
 if __name__ == '__main__':
