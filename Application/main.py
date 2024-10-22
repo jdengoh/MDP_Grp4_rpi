@@ -177,23 +177,30 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
     
     return obstacle_list
 
-
-def run_algo(obstacle_data):
-    st = time.time() # start to receive the obstacle
-    obstacles = parse_obstacle_data(obstacle_data)
-    app = AlgoMinimal(obstacles)
-    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
-    # obstacles_ordered = []
-    # for index in order:
-    #     for obstacle in obstacles:
-    #         if index == obstacle.index:
-    #             obstacles_ordered.append(obstacle)
-    print("order", order)
-    # print("obstacle after ordered", obstacles_ordered)
-    # targets = get_relative_pos(obstacles_ordered, app.targets)
-    commands = app.robot.convert_all_commands()
-    print("Commands:" + str(commands))
+def obstacle_optimizer(obstacles: dict) -> dict:
+    # Obstacle Optimizer
+    print("Old Obstacles:", obstacles)
     
+    # Iterate over each obstacle
+    for key, value in obstacles.items():
+        x, y, direction, _ = value
+        # Check the direction and apply changes based on conditions
+        if direction == 180 and x in [40, 50]:  # If direction is left (180), and x is 40 or 50
+            x = 60  # Set x to 60
+        elif direction == 0 and x in [150, 160]:  # If direction is right (0), and x is 150 or 160
+            x = 140  # Set x to 140
+        elif direction == 90 and y in [150, 160]:  # If direction is up (90), and y is 150 or 160
+            y = 140  # Set y to 140
+        elif direction == -90 and y in [40, 50]:  # If direction is down (-90), and y is 40 or 50
+            y = 60  # Set y to 60
+        
+        # Update the obstacle values in the dictionary
+        obstacles[key] = [x, y, direction, value[3]]
+
+    print("New obstacles:", obstacles)
+    return obstacles
+
+def command_optimizer(commands: List) -> List:
     # Command optimization
     i = 0
     while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
@@ -229,7 +236,29 @@ def run_algo(obstacle_data):
                 pass  # Skip if there is a non-numeric value
 
         i += 1
+    return commands
+
+def run_algo(obstacle_data):
+    st = time.time() # start to receive the obstacle
     
+    # Obstacle Optimizer
+    # obstacle_data = obstacle_optimizer(obstacle_data) # comment out if breaks code
+    
+    obstacles = parse_obstacle_data(obstacle_data)
+    app = AlgoMinimal(obstacles)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    print("order", order)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    
+    print("Commands:" + str(commands))
+    commands = command_optimizer(commands) # comment out if breaks code
     print("Nommands:" + str(commands))
     print("Order: " + str(order))
     

@@ -47,41 +47,30 @@ def parse_obstacle_data(data: dict) -> List[Obstacle]:
     
     return obstacle_list
 
-def run_simulator():
-    # Fill in obstacle positions with respect to lower bottom left corner.
-    # (x-coordinate, y-coordinate, Direction, index)
-    obstacles = {
-        "0": [0, 130, -90, 0],
-        "1": [0, 190, 0, 1],
-        "2": [70, 50, -90, 2], # problematic one
-        "3": [80, 140, 0, 3],
-        "4": [130, 80, 180, 4],
-        "5": [190, 0, 90, 5],
-        "6": [190, 190, -90, 6]
-    }
-    # obstacles = {
-    #     "0": [40, 100, 90, 0],
-    #     "1": [70, 170, -90, 1],
-    #     "2": [170, 100, -90, 2],
-    #     "3": [110, 70, 180, 3],
-    #     "4": [150, 30, 180, 4],
-    #     "5": [150, 160, 180, 5]
-    # }
+def obstacle_optimizer(obstacles: dict) -> dict:
+    # Obstacle Optimizer
+    print("Old Obstacles:", obstacles)
     
-    st = time.time() # start to receive the obstacle
-    obs = parse_obstacle_data(obstacles)
-    app = AlgoMinimal(obs)
-    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
-    # obstacles_ordered = []
-    # for index in order:
-    #     for obstacle in obstacles:
-    #         if index == obstacle.index:
-    #             obstacles_ordered.append(obstacle)
-    # print("obstacle after ordered", obstacles_ordered)
-    # targets = get_relative_pos(obstacles_ordered, app.targets)
-    commands = app.robot.convert_all_commands()
-    print("Commands:" + str(commands))
-    
+    # Iterate over each obstacle
+    for key, value in obstacles.items():
+        x, y, direction, _ = value
+        # Check the direction and apply changes based on conditions
+        if direction == 180 and x in [40, 50]:  # If direction is left (180), and x is 40 or 50
+            x = 60  # Set x to 60
+        elif direction == 0 and x in [150, 160]:  # If direction is right (0), and x is 150 or 160
+            x = 140  # Set x to 140
+        elif direction == 90 and y in [150, 160]:  # If direction is up (90), and y is 150 or 160
+            y = 140  # Set y to 140
+        elif direction == -90 and y in [40, 50]:  # If direction is down (-90), and y is 40 or 50
+            y = 60  # Set y to 60
+        
+        # Update the obstacle values in the dictionary
+        obstacles[key] = [x, y, direction, value[3]]
+
+    print("New obstacles:", obstacles)
+    return obstacles
+
+def command_optimizer(commands: List) -> List:
     # Command optimization
     i = 0
     while i < len(commands) - 3:  # Need at least 4 elements to form the pattern LFxxx -> P -> LBxxx -> LF090
@@ -117,8 +106,48 @@ def run_simulator():
                 pass  # Skip if there is a non-numeric value
 
         i += 1
+    return commands
+
+def run_simulator():
+    # Fill in obstacle positions with respect to lower bottom left corner.
+    # (x-coordinate, y-coordinate, Direction, index)
+    obstacles = {
+        "0": [0, 130, -90, 0],
+        "1": [0, 190, 0, 1],
+        "2": [70, 50, -90, 2], # problematic one
+        "3": [80, 140, 0, 3],
+        "4": [130, 80, 180, 4],
+        "5": [190, 0, 90, 5],
+        "6": [190, 190, -90, 6]
+    }
+    # obstacles = {
+    #     "0": [40, 100, 90, 0],
+    #     "1": [70, 170, -90, 1],
+    #     "2": [170, 100, -90, 2],
+    #     "3": [110, 70, 180, 3],
+    #     "4": [150, 30, 180, 4],
+    #     "5": [150, 160, 180, 5]
+    # }
     
+    obstacles = obstacle_optimizer(obstacles) # comment out if breaks code
+    
+    st = time.time() # start to receive the obstacle
+    obs = parse_obstacle_data(obstacles)
+    app = AlgoMinimal(obs)
+    order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
+    # obstacles_ordered = []
+    # for index in order:
+    #     for obstacle in obstacles:
+    #         if index == obstacle.index:
+    #             obstacles_ordered.append(obstacle)
+    # print("obstacle after ordered", obstacles_ordered)
+    # targets = get_relative_pos(obstacles_ordered, app.targets)
+    commands = app.robot.convert_all_commands()
+    
+    print("Commands:" + str(commands))
+    commands = command_optimizer(commands) # comment out if breaks code
     print("Nommands:" + str(commands))
+    
     print("Order: ", order)
     
     ed = time.time()
