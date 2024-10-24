@@ -143,23 +143,25 @@ def draw_validity_grid(grid):
 def run_simulator():
     # Fill in obstacle positions with respect to lower bottom left corner.
     # (x-coordinate, y-coordinate, Direction, index)
-    obstacles = {
-        "0": [0, 130, -90, 0],
-        "1": [0, 190, 0, 1],
-        "2": [70, 50, -90, 2], # problematic one
-        "3": [80, 140, 0, 3],
-        "4": [130, 80, 180, 4],
-        "5": [190, 0, 90, 5],
-        "6": [190, 190, -90, 6]
-    }
     # obstacles = {
-    #     "0": [40, 100, 90, 0],
-    #     "1": [70, 170, -90, 1],
-    #     "2": [170, 100, -90, 2],
-    #     "3": [110, 70, 180, 3],
-    #     "4": [150, 30, 180, 4],
-    #     "5": [150, 160, 180, 5]
+    #     "0": [0, 130, -90, 0],
+    #     "1": [0, 190, 0, 1],
+    #     "2": [70, 50, -90, 2], # problematic one
+    #     "3": [80, 140, 0, 3],
+    #     "4": [130, 80, 180, 4],
+    #     "5": [190, 0, 90, 5],
+    #     "6": [190, 190, -90, 6]
     # }
+    # task1 exam
+    obstacles = {
+        "0": [10, 160, 0, 0], # right
+        "1": [50, 110, -90, 1], # down
+        "2": [70, 40, 90, 2], # up
+        "3": [110, 130, 0, 3], # right
+        "4": [150, 20, 180, 4], # left
+        "5": [160, 190, -90, 5], # down
+        "6": [190, 90, 180, 6], # left
+    }
     
 
     obstacles = obstacle_optimizer(obstacles) # optimize the obstacles
