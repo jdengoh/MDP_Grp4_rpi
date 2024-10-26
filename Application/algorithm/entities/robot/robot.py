@@ -36,14 +36,14 @@ class Robot:
         """
         Convert the list of command objects to corresponding list of messages.
         """
-        print("Converting commands to string...", end="")
+        # print("Converting commands to string...", end="")
         string_commands = [command.convert_to_message() for command in self.brain.commands]
         total_dist = 0
-        print("srtring commands", string_commands)
+        # print("srtring commands", string_commands)
         modified_commands=[]
         for command in string_commands:
             tmpcmd = ""
-            print(command)
+            # print(command)
             parts = command.split(",")
             # if (parts[0]!="stop"): print(parts[0]+","+parts[1]+","+parts[2]+","+parts[3])
             if parts[0] == "1": # straight
@@ -82,7 +82,7 @@ class Robot:
                 
         string_commands.append("finish")
         modified_commands.append("finish")
-        print("total_dist =", total_dist)
+        print("Total Distance Travelled by Robot =", total_dist, "cm")
         return modified_commands
         return string_commands
 
