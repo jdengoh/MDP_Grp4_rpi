@@ -1,100 +1,81 @@
-import math
-import time
 from queue import PriorityQueue
 from typing import List, Tuple
 
-from algorithm import settings
+from algorithm import configs
 from algorithm.entities.commands.command import Command
 from algorithm.entities.commands.straight_command import StraightCommand
 from algorithm.entities.commands.turn_command import TurnCommand
-from algorithm.entities.grid.grid import Grid
 from algorithm.entities.grid.node import Node
 from algorithm.entities.grid.position import RobotPosition
 
 class ModifiedAStar:
     def __init__(self, grid, brain, start: RobotPosition, possible_ends: List[RobotPosition]):
-        # We use a copy of the grid rather than use a reference
-        # to the exact grid.
+        # Create a copy of the grid to work with rather than modifying the original grid directly
         self.grid = grid
         self.nodes = self.grid.nodes
-        self.cache = self.grid.cache
+        self.cache = self.grid.cache  # Cache to store already evaluated nodes
         self.brain = brain
 
         self.start = start
         self.possible_ends = possible_ends
-        self.possible_xy = [end.xy() for end in possible_ends]
+        self.possible_xy = [end.xy_coords() for end in possible_ends]  # List of possible endpoint coordinates
 
     def get_neighbours(self, pos: RobotPosition) -> List[Tuple[Node, RobotPosition, int, Command]]:
         """
-        Get movement neighbours from this position.
-
-        Note that all values in the Position object (x, y, direction) are all with respect to the grid!
-
-        We also expect the return Positions to be with respect to the grid.
+        Retrieves valid neighboring positions for a given robot position on the grid.
+        Coordinates returned here are relative to the grid.
         """
-        # We assume the robot will always make a full 90-degree turn to the next neighbour, and that it will travel
-        # a fix distance of 10 when travelling straight.
-        neighbours = []
+        neighbours = []  # Store valid neighboring nodes
 
-        # Check travel straights.
-        straight_dist = settings.UNIT_STRAIGHT * settings.SCALING_FACTOR
-        straight_commands = [
-            StraightCommand(straight_dist),
-            StraightCommand(-straight_dist),
-        ]
-        for c in straight_commands:
-            # Check if doing this command does not bring us to any invalid position.
-            after, p = self.check_valid_command(c, pos) #! Heavy, pos is current position, c is command, after is new position
-            if after:
-                travel_weight = c.dist
-                neighbours.append((after, p, straight_dist, c))
+        # Straight-line moves in both forward and reverse directions
+        straight_dist = configs.UNIT_STRAIGHT * configs.SCALING_FACTOR
+        straight_commands = [StraightCommand(straight_dist), StraightCommand(-straight_dist)]
+        
+        # Test all straight-line moves and add to neighbors if valid
+        for command in straight_commands:
+            next_node, next_position = self.check_valid_command(command, pos)
+            if next_node:
+                neighbours.append((next_node, next_position, straight_dist, command))
 
-        # Check turns
-        turn_penalty = settings.PATH_TURN_COST
+        # Turn commands with penalties for different directional adjustments
+        turn_penalty = configs.PATH_TURN_COST
         turn_commands = [
-            TurnCommand(90, False),  # Forward right turn
-            TurnCommand(-90, False),  # Forward left turn
-            TurnCommand(90, True),  # Reverse with wheels to right.
-            TurnCommand(-90, True),  # Reverse with wheels to left.
+            TurnCommand(90, False),   # 90-degree right turn (forward)
+            TurnCommand(-90, False),  # 90-degree left turn (forward)
+            TurnCommand(90, True),    # 90-degree right turn (reverse)
+            TurnCommand(-90, True)    # 90-degree left turn (reverse)
         ]
-        for c in turn_commands:
-            # Check if doing this command does not bring us to any invalid position.
-            after, p = self.check_valid_command(c, pos) #! Heavy
-            if after:
-                neighbours.append((after, p, turn_penalty, c))
+
+        # Test all turn commands and add to neighbors if valid
+        for command in turn_commands:
+            next_node, next_position = self.check_valid_command(command, pos)
+            if next_node:
+                neighbours.append((next_node, next_position, turn_penalty, command))
+
         return neighbours
 
-    def check_valid_position(self, pos):
-        x = int(pos.x)
-        y = int(pos.y)
-        if self.cache.get((x, y)) is not None:
-            return self.cache[(x, y)]
-        else:
-            return False
-
-    def check_valid_command(self, command: Command, p: RobotPosition):
+    def check_valid_command(self, command: Command, pos: RobotPosition):
         """
-        Checks if a command will bring a point into any invalid position.
-
-        If invalid, we return None for both the resulting grid location and the resulting position.
+        Verifies if executing a command from the current position results in a valid grid position.
+        Returns None if the resulting position is invalid.
         """
         # Check specifically for validity of turn command.
-        p = p.copy()
+        pos = pos.copy()
         if isinstance(command, TurnCommand):
-            p_c = p.copy()
-            original_direction = p_c.direction
-            for tick in range(command.ticks // settings.PATH_TURN_CHECK_GRANULARITY):
-                tick_command = TurnCommand(command.angle / (command.ticks // settings.PATH_TURN_CHECK_GRANULARITY),
+            pos_copy = pos.copy()
+            original_direction = pos_copy.direction
+            for tick in range(command.ticks // configs.TURN_GRANULARITY):
+                tick_command = TurnCommand(command.angle / (command.ticks // configs.TURN_GRANULARITY),
                                            command.rev)
-                tick_command.apply_on_pos(p_c, original_direction)
-                x = int(p_c.x)
-                y = int(p_c.y)
+                tick_command.apply_on_pos(pos_copy, original_direction)
+                x = int(pos_copy.x)
+                y = int(pos_copy.y)
                 if self.cache.get((x, y)) is not None:
                     v1 = self.cache[(x, y)]
                 else:
                     v1 = False
-                col_num = x // settings.GRID_CELL_LENGTH
-                row_num = settings.GRID_NUM_GRIDS - (y // settings.GRID_CELL_LENGTH) - 1
+                col_num = x // configs.GRID_CELL_LENGTH
+                row_num = configs.GRID_NUM_GRIDS - (y // configs.GRID_CELL_LENGTH) - 1
                 if row_num < 0 or col_num < 0 or row_num >= len(self.nodes) or col_num >= len(self.nodes[0]):
                     v2 = None
                 else:
@@ -102,87 +83,84 @@ class ModifiedAStar:
                 if not (v1 and v2):
                     return None, None
         if isinstance(command, TurnCommand):
-            command.apply_on_pos(p, p.direction)
+            command.apply_on_pos(pos, pos.direction)
         else:
-            command.apply_on_pos(p)
-        x = int(p.x)
-        y = int(p.y)
+            command.apply_on_pos(pos)
+        x = int(pos.x)
+        y = int(pos.y)
         if self.cache.get((x, y)) is not None:
             v1 = self.cache[(x, y)]
         else:
             v1 = False
-        after = self.grid.get_coordinate_node(*p.xy())
+        after = self.grid.get_coordinate_node(*pos.xy_coords())
         if v1 and after:
-            after.pos.direction = p.direction
-            return after.copy(), p
+            after.pos.direction = pos.direction
+            return after.copy(), pos
         # ! Check valid position is heavy
         return None, None
+    
+    def is_within_bounds(self, x: int, y: int) -> bool:
+        """Checks if coordinates are within the grid boundaries."""
+        col_num = x // configs.GRID_CELL_LENGTH
+        row_num = configs.GRID_NUM_GRIDS - (y // configs.GRID_CELL_LENGTH) - 1
+        return 0 <= row_num < len(self.nodes) and 0 <= col_num < len(self.nodes[0])
 
     def heuristic(self, curr_pos: RobotPosition):
         """
-        Measure the difference in distance between the provided position and the
-        end position.
+        Heuristic function to estimate cost from current position to nearest endpoint.
         """
-        t = 10000
-        for i in range(len(self.possible_xy)):
-            x_d = self.possible_xy[i][0] - curr_pos.x
-            y_d = self.possible_xy[i][1] - curr_pos.y
-            t = min(t, abs(x_d) + abs(y_d))
-        return t
-    
+        min_dist = float('inf')
+        for x, y in self.possible_xy:
+            min_dist = min(min_dist, abs(x - curr_pos.x) + abs(y - curr_pos.y))
+        return min_dist
 
     def start_astar(self, get_target=False):
-        frontier = PriorityQueue()  # Store frontier nodes to travel to.
-        backtrack = dict()  # Store the sequence of nodes being travelled.
-        cost = dict()  # Store the cost to travel from start to a node.
-
-        # We can check what the goal node is
-        goal_nodes = []
-        for end in self.possible_ends:
-            goal_node = self.grid.get_coordinate_node(*end.xy()).copy()  # Take note of copy!
-            goal_node.pos.direction = end.direction  # Set the required direction at this node.
-            goal_nodes.append(goal_node)
-
-        # Add starting node set into the frontier.
-        start_node: Node = self.grid.get_coordinate_node(*self.start.xy()).copy()  # Take note of copy!
-        start_node.direction = self.start.direction  # Make the node know which direction the robot is facing.
-
-        offset = 0  # Used to tie-break.
-        frontier.put((0, offset, (start_node, self.start)))  # Extra time parameter to tie-break same priority.
-        cost[start_node] = 0
-        backtrack[start_node] = (None, None)  # Parent, Command
+        """Runs the A* algorithm to find the optimal path to the nearest endpoint."""
+        frontier = PriorityQueue()
+        backtrack = {}
+        cost = {}
         
-        while not frontier.empty():  # While there are still nodes to process.
+        goal_nodes = [self.grid.get_coordinate_node(*end.xy_coords()).copy() for end in self.possible_ends]
+        for goal, end in zip(goal_nodes, self.possible_ends):
+            goal.pos.direction = end.direction
+
+        start_node = self.grid.get_coordinate_node(*self.start.xy_coords()).copy()
+        start_node.direction = self.start.direction
+
+        frontier.put((0, 0, (start_node, self.start)))
+        cost[start_node] = 0
+        backtrack[start_node] = (None, None)
+        offset = 0  # To avoid tie-breaking issues with PriorityQueue
+
+        while not frontier.empty():
             priority, _, (current_node, current_position) = frontier.get()
+            
             for i, goal_node in enumerate(goal_nodes):
-                if current_node.x == goal_node.x and current_node.y == goal_node.y and current_node.direction == goal_node.pos.direction:
+                if (current_node.x == goal_node.x and current_node.y == goal_node.y and
+                        current_node.direction == goal_node.pos.direction):
                     self.extract_commands(backtrack, goal_node)
-                    if not get_target:
-                        return current_position
-                    else:
-                        return current_position, i
+                    return (current_position, i) if get_target else current_position
 
-            for new_node, new_pos, weight, c in self.get_neighbours(current_position):
-                new_cost = cost.get(current_node) + weight
+            for next_node, next_position, weight, command in self.get_neighbours(current_position):
+                new_cost = cost[current_node] + weight
 
-                if new_node not in backtrack or new_cost < cost[new_node]:
+                if next_node not in cost or new_cost < cost[next_node]:
                     offset += 1
-                    priority = new_cost + self.heuristic(new_pos)
+                    frontier.put((new_cost + self.heuristic(next_position), offset, (next_node, next_position)))
+                    backtrack[next_node] = (current_node, command)
+                    cost[next_node] = new_cost
 
-                    frontier.put((priority, offset, (new_node, new_pos)))
-                    backtrack[new_node] = (current_node, c)
-                    cost[new_node] = new_cost
         return None
 
     def extract_commands(self, backtrack, goal_node):
         """
-        Extract required commands to get to destination.
+        Retrieves the sequence of commands from the backtrack dictionary to reach the goal node.
         """
         commands = []
-        curr = goal_node
-        while curr:
-            curr, c = backtrack.get(curr, (None, None))
-            if c:
-                commands.append(c)
+        current = goal_node
+        while current:
+            current, command = backtrack.get(current, (None, None))
+            if command:
+                commands.append(command)
         commands.reverse()
         self.brain.commands.extend(commands)

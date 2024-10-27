@@ -1,72 +1,105 @@
-from algorithm import settings
+from algorithm import configs
 from algorithm.entities.assets.direction import Direction
 
 
 class Position:
     def __init__(self, x, y, direction: Direction = None):
         """
-        x and y coordinates are in terms of the grid.
-        Note that they should already be scaled properly.
-
-        Most of the time, we do not need to set angle. Should only be used for the robot.
-        Note that the angle should be in DEGREES.
+        Initializes Position with x, y coordinates and an optional direction.
+        
+        Args:
+            x (int): X-coordinate on the grid
+            y (int): Y-coordinate on the grid
+            direction (Direction, optional)
         """
         self.x = x
         self.y = y
         self.direction = direction
 
     def __str__(self):
-        return f"Position({(self.x // settings.SCALING_FACTOR)}, {self.y // settings.SCALING_FACTOR}, " \
-               f"angle={self.direction})"
+        """
+        Returns a formatted string representation of the position with scaled x, y coordinates.
+        """
+        scaled_x = self.x // configs.SCALING_FACTOR
+        scaled_y = self.y // configs.SCALING_FACTOR
+        return f"Position({scaled_x}, {scaled_y}, direction={self.direction})"
 
     __repr__ = __str__
 
-    def xy(self):
+    def xy_coords(self):
         """
-        Return the true x, y coordinates of the current Position.
+        Returns the true, unscaled (x, y) coordinates of this Position.
+
+        Returns:
+            tuple: A tuple containing (x, y) coordinates.
         """
         return self.x, self.y
 
-    def xy_dir(self):
-        return *self.xy(), self.direction
+    def xy_direction(self):
+        """
+        Returns the coordinates and direction as a tuple.
+
+        Returns:
+            tuple: Contains (x, y, direction).
+        """
+        return *self.xy_coords(), self.direction
 
     def copy(self):
         """
-        Create a new copy of this Position.
+        Creates a copy of this Position instance.
+
+        Returns:
+            Position: A new instance with the same x, y, and direction values.
         """
         return Position(self.x, self.y, self.direction)
 
-    def xy_dir_telemetry(self):
+    def get_scaled_xy_direction(self):
         """
-        Return unscaled, original x, y coordinates and direction of the current Position for telemetry purposes.
+        Provides the scaled-down (x, y) coordinates and direction for telemetry purposes.
+
+        Returns:
+            tuple: A tuple containing scaled (x, y) and direction as a cardinal string.
         """
-
-        x = int(self.x / settings.SCALING_FACTOR)
-        y = int(self.y / settings.SCALING_FACTOR)
-
-        # Prepare to convert Direction(Enum) to North East South West Strings.
-        dir_conversion = {
+        scaled_x = self.x // configs.SCALING_FACTOR
+        scaled_y = self.y // configs.SCALING_FACTOR
+        
+        direction_map = {
             Direction.TOP: 'N',
             Direction.RIGHT: 'E',
             Direction.BOTTOM: 'S',
             Direction.LEFT: 'W'
         }
 
-        return x, y, dir_conversion.get(self.direction)
-
+        return scaled_x, scaled_y, direction_map.get(self.direction)
 
 
 class RobotPosition(Position):
     def __init__(self, x, y, direction: Direction = None, angle=None):
+        """
+        Initializes RobotPosition with x, y coordinates, direction, and an optional angle.
+        
+        Args:
+            x (int): X-coordinate of the robot.
+            y (int): Y-coordinate of the robot.
+            direction (Direction, optional): Cardinal direction.
+            angle (int, optional): The robot's angle in degrees.
+        """
         super().__init__(x, y, direction)
-        self.angle = angle
-        if direction is not None:
-            self.angle = direction.value
+        self.angle = angle if angle is not None else direction.value if direction else None
 
     def __str__(self):
+        """
+        Returns a formatted string representation of the robot's position including angle.
+        """
         return f"RobotPosition({super().__str__()}, angle={self.angle})"
 
     __repr__ = __str__
 
     def copy(self):
+        """
+        Creates a copy of this RobotPosition instance.
+
+        Returns:
+            RobotPosition: A new instance with the same x, y, direction, and angle values.
+        """
         return RobotPosition(self.x, self.y, self.direction, self.angle)

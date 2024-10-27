@@ -1,10 +1,8 @@
 import itertools
-from collections import deque
-import multiprocessing
 import math
-from multiprocessing.pool import ThreadPool
-# from pathos.multiprocessing import ProcessingPool as Pool
-from algorithm import settings
+
+from collections import deque
+from algorithm import configs
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.commands.scan_command import ScanCommand
 from algorithm.entities.commands.straight_command import StraightCommand
@@ -15,90 +13,66 @@ class Brain:
     def __init__(self, robot, grid):
         self.robot = robot
         self.grid = grid
-
-        # Compute simple Hamiltonian paths for all obstacles
-        self.simple_hamiltonian = []
-
-        # Create all the commands required to finish the course.
-        self.commands = deque()
+        self.simple_hamiltonian = []  # Stores simplified Hamiltonian paths
+        self.commands = deque()  # Command queue for the robot
 
     def compute_simple_hamiltonian_path(self):
         """
-        Get the Hamiltonian Path to all points with the best possible effort.
-        This is a simple calculation where we assume that we travel directly to the next obstacle.
+        Generate possible Hamiltonian paths among obstacles, minimizing travel distance.
         """
-        # Generate all possible permutations for the image obstacles
-        perms = list(itertools.permutations(self.grid.obstacles))
+        perms = list(itertools.permutations(self.grid.obstacles))  # All possible obstacle paths
         
         def calc_distance(path):
-            targets = [self.robot]
+            total_distance = 0
+            last_pos = self.robot.pos
+            for obstacle in path:
+                target_pos = obstacle.get_nearest_valid_target(last_pos) if obstacle.valid_targets else obstacle.pos
+                total_distance += abs(last_pos.x - target_pos.x) + abs(last_pos.y - target_pos.y)
+                last_pos = target_pos
+            return total_distance
 
-            dist = 0
-            lst_target = targets[0].pos
-            for i in range(len(path)):
-                obstacle = path[i]
-                if len(obstacle.valid_targets) == 0:
-                    nxt_target = obstacle.pos # obstacle itself
-                    # continue
-                else:
-                    nxt_target = obstacle.get_nearest_valid_target(lst_target)
-                
-                dist += abs(lst_target.x - nxt_target.x) + abs(lst_target.y - nxt_target.y)
-                lst_target = nxt_target
-            return dist
-        
-        perms.sort(key=calc_distance)
-        print("Found simple hamiltonian paths")
+        perms.sort(key=calc_distance)  # Sort by shortest path
         return perms
 
     def compress_paths(self):
         """
-        Compress similar commands into one command.
-
-        Helps to reduce the number of commands.
+        Merges consecutive straight commands to minimize command count.
         """
-        print("Compressing commands... ", end="")
-        index = 0
         new_commands = deque()
+        index = 0
         while index < len(self.commands):
             command = self.commands[index]
             if isinstance(command, StraightCommand):
-                new_length = 0
+                combined_distance = 0
                 while index < len(self.commands) and isinstance(self.commands[index], StraightCommand):
-                    new_length += self.commands[index].dist
+                    combined_distance += self.commands[index].distance
                     index += 1
-                command = StraightCommand(new_length)
-                new_commands.append(command)
+                new_commands.append(StraightCommand(combined_distance))
             else:
                 new_commands.append(command)
                 index += 1
         self.commands = new_commands
-        print("Done!")
-    
+
     def compress_paths_single(self, commands):
         """
-        Compress similar commands into one command.
-
-        Helps to reduce the number of commands.
+        Reduces consecutive straight commands within a single path command list.
         """
-        print("Compressing commands... ", end="")
-        index = 0
         new_commands = deque()
+        index = 0
         while index < len(commands):
             command = commands[index]
             if isinstance(command, StraightCommand):
-                new_length = 0
+                combined_distance = 0
                 while index < len(commands) and isinstance(commands[index], StraightCommand):
-                    new_length += commands[index].dist
+                    combined_distance += commands[index].dist
                     index += 1
-                command = StraightCommand(new_length)
-                new_commands.append(command)
+                new_commands.append(StraightCommand(combined_distance))
             else:
                 new_commands.append(command)
                 index += 1
         return new_commands
     
-    # @profile
+
     def plan_path(self):
         print("-" * 40)
         print("STARTING PATH COMPUTATION...")
@@ -106,11 +80,11 @@ class Brain:
             tot = 1
             for i in range(1, len(self.grid.obstacles) + 1):
                 tot *= i
-            consider = min(settings.NUM_HAM_PATH_CHECK, tot)
+            consider = min(configs.NUM_HAM_PATH_CHECK, tot)
         if len(self.grid.obstacles) == 4:
-            consider = min(settings.NUM_HAM_PATH_CHECK,40)
+            consider = min(configs.NUM_HAM_PATH_CHECK,40)
         elif len(self.grid.obstacles) > 4:
-            consider = settings.NUM_HAM_PATH_CHECK
+            consider = configs.NUM_HAM_PATH_CHECK
 
         valid_targets = []
         for obstacle in self.grid.obstacles:
@@ -133,7 +107,6 @@ class Brain:
         def process_path(path_index, path, curr):   
             commands = []
             order = []
-            # print(f"Processing path {path_index}...")
             for obstacle in path:
                 valid_targets = obstacle.valid_targets
                 astar = ModifiedAStar(self.grid, self, curr, valid_targets)
@@ -141,42 +114,24 @@ class Brain:
                 if res is None:
                     pass
                 else:
-                    # print("\tPath found.")
                     curr = res
-                    self.commands.append(ScanCommand(settings.ROBOT_SCAN_TIME, obstacle.index))
+                    self.commands.append(ScanCommand(configs.ROBOT_SCANNING_TIME, obstacle.index))
                     order.append(obstacle.index)
             string_commands = [command.convert_to_message() for command in self.commands]
             total_dist = 0
             for command in string_commands:
                 parts = command.split(",")
-                if parts[0] == "1":  # straight
+                if parts[0] == "1":  # move forward
                     total_dist += int(parts[2])
                 if parts[0] == "0":  # turn
                     total_dist += int(200)
             
-            commands = self.compress_paths_single(self.commands)
-            # print(f"Processing path {path_index} with length {len(commands)} and order of recognition", order)
             self.commands = []
             
-            return order, path_index, total_dist
+            return order, path_index, total_dist              
         
-        def call_back(result):
-            orders.append(result)
-        def custom_error_callback(error):
-            print(f'Got error: {error}')
-        
-        if settings.multi_threading:
-            pool = ThreadPool(processes=settings.NUM_THREADS)
-            
-            for i, path in enumerate(paths):
-                pool.apply_async(process_path, args=(i, path, self.robot.pos.copy()), callback=call_back, error_callback=custom_error_callback)
-
-            # Close the pool and wait for all processes to finish
-            pool.close()
-            pool.join()
-        else:
-            for i, path in enumerate(paths):
-                orders.append(process_path(i, path, self.robot.pos.copy()))
+        for i, path in enumerate(paths):
+            orders.append(process_path(i, path, self.robot.pos.copy()))
 
         shortest = 10000
         for item in orders:
@@ -202,9 +157,9 @@ class Brain:
                 curr = res
                 current_pos = target[chose_target]
                 target_pos = obstacle.pos
-                peak_command = None
-                reverse_peak_command = None
-                right_or_left = None
+                peek_command = None
+                reversed_peek_command = None
+                turn_direction = None
                 if target_pos.direction == Direction.TOP or target_pos.direction == Direction.BOTTOM:
                     ratio = abs(current_pos.x - target_pos.x) / abs(current_pos.y - target_pos.y)
                 else:
@@ -212,54 +167,44 @@ class Brain:
                 theta = math.atan(ratio)
                 theta = math.degrees(theta)
                 if target_pos.direction == Direction.TOP:
-                    if current_pos.x > target_pos.x + settings.peak_horizontal_tolerance:
-                        right_or_left = "right"
-                        # turn right
-                    elif current_pos.x < target_pos.x - settings.peak_horizontal_tolerance:
-                        right_or_left = "left"
-                        # turn left
+                    if current_pos.x > target_pos.x + configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "right"
+                    elif current_pos.x < target_pos.x - configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "left"
                 if target_pos.direction == Direction.BOTTOM:
-                    if current_pos.x > target_pos.x + settings.peak_horizontal_tolerance:
-                        right_or_left = "left"
-                        # turn left
-                    elif current_pos.x < target_pos.x - settings.peak_horizontal_tolerance:
-                        right_or_left = "right"
-                        # turn right
+                    if current_pos.x > target_pos.x + configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "left"
+                    elif current_pos.x < target_pos.x - configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "right"
                 if target_pos.direction == Direction.LEFT:
-                    if current_pos.y > target_pos.y + settings.peak_horizontal_tolerance:
-                        right_or_left = "right"
-                        # turn right
-                    elif current_pos.y < target_pos.y - settings.peak_horizontal_tolerance:
-                        right_or_left = "left"
-                        # turn left
+                    if current_pos.y > target_pos.y + configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "right"
+                    elif current_pos.y < target_pos.y - configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "left"
                 if target_pos.direction == Direction.RIGHT:
-                    if current_pos.y > target_pos.y + settings.peak_horizontal_tolerance:
-                        right_or_left = "left"
-                        # turn left
-                    elif current_pos.y < target_pos.y - settings.peak_horizontal_tolerance:
-                        right_or_left = "right"
-                        # turn right
-                if right_or_left == "right":
-                    peak_command = TurnCommand(-theta, False)
-                    reverse_peak_command = TurnCommand(theta, True)
+                    if current_pos.y > target_pos.y + configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "left"
+                    elif current_pos.y < target_pos.y - configs.PEEK_HORIZONTAL_THRESHOLD:
+                        turn_direction = "right"
+                if turn_direction == "right":
+                    peek_command = TurnCommand(-theta, False)
+                    reversed_peek_command = TurnCommand(theta, True)
                 else:
-                    peak_command = TurnCommand(theta, False)
-                    reverse_peak_command = TurnCommand(-theta, True)
-                    
-                # add a peak turn 
-                if peak_command is not None and reverse_peak_command is not None:
-                    if abs(theta) > settings.angle_peak_threshold:
-                        self.commands.append(peak_command)
+                    peek_command = TurnCommand(theta, False)
+                    reversed_peek_command = TurnCommand(-theta, True)
+                
+                if peek_command is not None and reversed_peek_command is not None:
+                    if abs(theta) > configs.PEEK_ANGLE_THRESHOLD:
+                        self.commands.append(peek_command)
                         pass
                 
-                self.commands.append(ScanCommand(settings.ROBOT_SCAN_TIME, obstacle.index))
+                self.commands.append(ScanCommand(configs.ROBOT_SCANNING_TIME, obstacle.index))
                 
-                if peak_command is not None and reverse_peak_command is not None:
-                    if abs(theta) > settings.angle_peak_threshold:
-                        self.commands.append(reverse_peak_command)
+                if peek_command is not None and reversed_peek_command is not None:
+                    if abs(theta) > configs.PEEK_ANGLE_THRESHOLD:
+                        self.commands.append(reversed_peek_command)
                         pass
-                # add a reverse peak turn
         
         self.compress_paths()
-        print("length of commands", len(self.commands))
+        print("Number of Commands", len(self.commands))
         return orders[best_index][0], targets

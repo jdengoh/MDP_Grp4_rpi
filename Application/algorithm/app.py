@@ -1,32 +1,37 @@
-from typing import List
-from abc import ABC, abstractmethod
-
 import time
-
-from algorithm import settings
-from algorithm.entities.assets import colors
 from algorithm.entities.grid.grid import Grid
-from algorithm.entities.grid.obstacle import Obstacle
 from algorithm.entities.robot.robot import Robot
 
-import os
-
-class AlgoMinimal():
+class AlgoPathPlanner:
     """
-    Minimal app to just calculate a path and then send the commands over.
+    Minimal application to generate a path and transmit commands based on obstacles in the grid.
     """
     def __init__(self, obstacles):
-        st = time.time()
-        self.grid = Grid(obstacles)
-        self.robot = Robot(self.grid)
-        print("time to create grid and robot", time.time()-st)
+        """
+        Initializes the grid and robot based on the provided obstacles.
+
+        Args:
+            obstacles (list): List of obstacles to be used for grid and path planning.
+        """
+        start_time = time.time()  # Start timer for initialization
+        self.grid = Grid(obstacles)  # Create grid with specified obstacles
+        self.robot = Robot(self.grid)  # Initialize the robot within this grid
+        print("Initialization time (grid and robot setup):", time.time() - start_time)
 
     def execute(self):
-        # Calculate path
-        print("Calculating path...")
-        st = time.time()
-        order, targets = self.robot.brain.plan_path() # change change change change change change change change change change change change
-        print("time to calculate path", time.time()-st)
-        self.targets = targets
-        print("Done!")
-        return order # change change change change change change change change change change change change
+        """
+        Executes the path planning and returns the order of navigation steps.
+
+        Returns:
+            list: Ordered path of waypoints or grid cells to navigate.
+        """
+        print("Starting path calculation...")
+        start_time = time.time()  # Start timer for path calculation
+
+        # Calculate path based on grid obstacles, returning order and target locations
+        order, targets = self.robot.brain.plan_path()
+        print("Path calculation time:", time.time() - start_time)
+
+        self.targets = targets  # Store calculated targets for further use if needed
+        print("Path calculation complete.")
+        return order
