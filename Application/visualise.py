@@ -2,7 +2,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 from typing import List
-from algorithm import settings
+from algorithm import configs
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.grid.obstacle import Obstacle
 from algorithm.entities.grid.grid import Grid
@@ -49,18 +49,18 @@ def draw_validity_grid(grid):
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
-    ax.set_xlim(0, settings.WINDOW_SIZE[0])
-    ax.set_ylim(0, settings.WINDOW_SIZE[1])
+    ax.set_xlim(0, configs.WINDOW_SIZE[0])
+    ax.set_ylim(0, configs.WINDOW_SIZE[1])
     ax.set_title(f"Grid Verification - Validity Visualization")
 
     # Draw nodes, color based on validity
-    for x in range(0, settings.WINDOW_SIZE[0], settings.GRID_CELL_LENGTH):
-        for y in range(0, settings.WINDOW_SIZE[1], settings.GRID_CELL_LENGTH):
+    for x in range(0, configs.WINDOW_SIZE[0], configs.GRID_CELL_LENGTH):
+        for y in range(0, configs.WINDOW_SIZE[1], configs.GRID_CELL_LENGTH):
             if grid.cache.get((x, y)) is False:
                 color = 'red'  # Invalid area
             else:
                 color = 'lightgray'  # Valid area
-            rect = plt.Rectangle((x, y), settings.GRID_CELL_LENGTH, settings.GRID_CELL_LENGTH, color=color, fill=True, edgecolor='black')
+            rect = plt.Rectangle((x, y), configs.GRID_CELL_LENGTH, configs.GRID_CELL_LENGTH, color=color, fill=True, edgecolor='black')
             ax.add_patch(rect)
 
     plt.gca().invert_yaxis()  # Invert y-axis to match typical grid orientation

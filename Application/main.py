@@ -10,13 +10,13 @@ from image_rec import predict_image, load_model, stitch_image, stitch_image_own
 import sys
 import time
 from typing import List
-import socket
-import pickle
-from algorithm import settings
-from algorithm.app import AlgoMinimal
+from algorithm import configs
+from algorithm.app import AlgoPathPlanner
 from algorithm.entities.assets.direction import Direction
 from algorithm.entities.grid.obstacle import Obstacle
 from algorithm.entities.grid.grid import Grid
+from matplotlib import pyplot as plt
+
 
 #from model import *
 # from helper import command_generator
@@ -51,18 +51,18 @@ def draw_validity_grid(grid):
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
-    ax.set_xlim(0, settings.WINDOW_SIZE[0])
-    ax.set_ylim(0, settings.WINDOW_SIZE[1])
+    ax.set_xlim(0, configs.WINDOW_SIZE[0])
+    ax.set_ylim(0, configs.WINDOW_SIZE[1])
     ax.set_title(f"Grid Verification - Validity Visualization")
 
     # Draw nodes, color based on validity
-    for x in range(0, settings.WINDOW_SIZE[0], settings.GRID_CELL_LENGTH):
-        for y in range(0, settings.WINDOW_SIZE[1], settings.GRID_CELL_LENGTH):
+    for x in range(0, configs.WINDOW_SIZE[0], configs.GRID_CELL_LENGTH):
+        for y in range(0, configs.WINDOW_SIZE[1], configs.GRID_CELL_LENGTH):
             if grid.cache.get((x, y)) is False:
                 color = 'red'  # Invalid area
             else:
                 color = 'lightgray'  # Valid area
-            rect = plt.Rectangle((x, y), settings.GRID_CELL_LENGTH, settings.GRID_CELL_LENGTH, color=color, fill=True, edgecolor='black')
+            rect = plt.Rectangle((x, y), configs.GRID_CELL_LENGTH, configs.GRID_CELL_LENGTH, color=color, fill=True, edgecolor='black')
             ax.add_patch(rect)
 
     plt.gca().invert_yaxis()  # Invert y-axis to match typical grid orientation
@@ -168,8 +168,8 @@ def get_relative_pos(obstacles, targets):
         target = targets[i]
         ob_x = ob.x_cm 
         ob_y = ob.y_cm
-        camera_x = target.x // settings.SCALING_FACTOR
-        camera_y = target.y // settings.SCALING_FACTOR
+        camera_x = target.x // configs.SCALING_FACTOR
+        camera_y = target.y // configs.SCALING_FACTOR
         if ob.direction == Direction.TOP:
             horizontal = camera_x - ob_x
             vertical = abs(camera_y - ob_y)
@@ -276,7 +276,7 @@ def run_algo(obstacle_data):
     obstacle_data = obstacle_optimizer(obstacle_data)
     
     obstacles = parse_obstacle_data(obstacle_data)
-    app = AlgoMinimal(obstacles)
+    app = AlgoPathPlanner(obstacles)
     grid = Grid(obstacles)
     # draw_validity_grid(grid)
     order = app.execute() # [] all are based 1, but might in different order, for e.g: [8,4,3,1] and missing some as well
