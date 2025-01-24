@@ -13,13 +13,12 @@ import time
 def snap_pic():
     url = f"http://{API_IP}:{API_PORT}/image"
     print(url)
-    # Initialize the PiCamera
     camera = PiCamera()
 
     # Capture image
     image_filename = f"/home/pi/images/{int(time.time())}.jpg"
     camera.start_preview()
-    time.sleep(2)  # Camera warm-up time
+    time.sleep(2)
     camera.capture(image_filename)
     camera.stop_preview()
 
@@ -32,9 +31,7 @@ def snap_pic():
 
     # Get the response from the server
     if response.status_code == 200:
-        # print("200")
         print("rpi_client - Image detection result:", response.json())
-        
     else:
         print("Error:", response.json())
 
