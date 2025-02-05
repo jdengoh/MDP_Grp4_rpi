@@ -2,6 +2,8 @@
 
 Hi! Welcome to our group's RPI and Algo repository. We did our best to clean up the code after our project ended, so hopefully it is as organised as it can be for your reference.
 
+We managed to place **9th** place in task 1 and **15th** place for task 2 :D
+
 ## Overview
 
 Hi! Welcome to our group's RPI and Algo repository. We did our best to clean up the code after our project ended, so hopefully it is as organised as it can be for your reference.
@@ -34,8 +36,12 @@ A Flask server was deployed as our inference server to:
 Our work was only made possible thanks to the following resources (really really grateful for it). Below are the links!
 
 ### References
+
 https://github.com/pyesonekyaw/CZ3004-SC2079-MDP-RaspberryPi
 
+### RPI Cam
+
+https://hackernoon.com/polising-raspberry-pi-high-quality-camera-3z113u18
 
 ### Bluetooth Troubleshoot
 https://www.reddit.com/r/learnpython/comments/6wnutb/python_353raspberry_pi_cant_import_bluetooth/
