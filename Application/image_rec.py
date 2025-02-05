@@ -32,22 +32,20 @@ def predict_image(image, model):
         img = Image.open(image)
 
         # Predict the image using the model
-        results = model(img)
+        pred_output = model(img)
         
-        results.save('runs')
-        print(results)
+        pred_output.save('runs')
+        print(pred_output)
 
-        # Convert the results to a pandas dataframe and calculate the height, width, and area of the bounding box
-        df_results = results.pandas().xyxy[0]
-        df_results['bboxHt'] = df_results['ymax'] - df_results['ymin']
-        df_results['bboxWt'] = df_results['xmax'] - df_results['xmin']
-        df_results['bboxArea'] = df_results['bboxHt'] * df_results['bboxWt']
+        # Convert the pred_output to a pandas dataframe and calculate the height, width, and area of the bounding box
+        df_predictions = pred_output.pandas().xyxy[0]
+        df_predictions['box_height'] = df_predictions['ymax'] - df_predictions['ymin']
+        df_predictions['box_width'] = df_predictions['xmax'] - df_predictions['xmin']
+        df_predictions['box_area'] = df_predictions['box_height'] * df_predictions['box_width']
 
-        # Sort by bounding box area, largest first
-        df_results = df_results.sort_values('bboxArea', ascending=False)
+        df_predictions = df_predictions.sort_values('box_area', ascending=False)
 
-        # Filter out 'Bullseye' and initialize prediction to 'NA'
-        pred_list = df_results
+        pred_list = df_predictions
 
         print()
         print("************** PRED LIST **************")
@@ -64,21 +62,19 @@ def predict_image(image, model):
         # If more than one label is detected, apply further logic to select the best prediction
         elif len(pred_list) > 1:
             pred_shortlist = []
-            current_area = pred_list.iloc[0]['bboxArea']
+            current_area = pred_list.iloc[0]['box_area']
             
             # Filter by confidence and area
             for _, row in pred_list.iterrows():
                 print("************** Case 2: ITERROWS TIME **************")
-                # and (current_area * 0.8 <= row['bboxArea'])
-                
                 if row['name'] != 'Bullseye' and (row['confidence'] > 0.8 or \
                                                   (row['name'] in ['F', 'G', 'H', 'Y', 'V'] and row['confidence'] >= 0.75) or \
-                                                    (row['name'] == 'One' and current_area * 0.6 <= row['bboxArea'])):
+                                                    (row['name'] == 'One' and current_area * 0.6 <= row['box_area'])):
                     print("=============== APPENDING STHING ===============")
                     print(row)
                     print("===============================================")
                     pred_shortlist.append(row)
-                    current_area = row['bboxArea']
+                    current_area = row['box_area']
                     print("+++++++++++++++ APPENDING STHING +++++++++++++++")
 # ------------------------------------------------------------------------------------------------------------ #
             print("=============== PRED SHORTLIST ===============")
@@ -98,7 +94,6 @@ def predict_image(image, model):
                     pred = five_pred
                     print("************** Choosing 'five' based on confidence difference **************")
             else:
-                # Select based on the signal and other conditions
                 if len(pred_shortlist) == 1:
                     print("************** ENTERING IF(pred_shortlist == 1) **************")
                     pred = pred_shortlist[0]
@@ -109,7 +104,6 @@ def predict_image(image, model):
 
                     pred_shortlist.sort(key=lambda x: x['xmin'])
 
-                    
                     fake_con = -1
                     for i in range(len(pred_shortlist)):
                         if 250 < pred_shortlist[i]['xmin'] < 774:
@@ -119,12 +113,12 @@ def predict_image(image, model):
                             else:
                                 continue
                     if isinstance(pred, str):
-                        pred_shortlist.sort(key=lambda x: x['bboxArea'])
+                        pred_shortlist.sort(key=lambda x: x['box_area'])
                         pred = pred_shortlist[0]
 
         # Draw the selected bounding box on the image
         if not isinstance(pred, str):
-            draw_own_bbox(np.array(img), pred['xmin'], pred['ymin'], pred['xmax'], pred['ymax'], pred['name'])
+            draw(np.array(img), pred['xmin'], pred['ymin'], pred['xmax'], pred['ymax'], pred['name'])
             print(f"Selected prediction: {pred['name']}")
         
         # Return the selected prediction as per the logic
@@ -148,7 +142,10 @@ def predict_image(image, model):
         print(f"Final result: NA")
         return ['NA', 'NA']
 
-def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
+def draw(img,x1,y1,x2,y2,label):
+
+    col = (40,255,18)
+    t_col = (0,0,0)
 
     id_list = {
     "NA": 'NA', "Bullseye": 10, "one": 11, "two": 12, "three": 13, "four": 14,
@@ -160,65 +157,62 @@ def draw_own_bbox(img,x1,y1,x2,y2,label,color=(36,255,12),text_color=(0,0,0)):
     }
     
     label = label + "-" + str(id_list[label])
-    # Convert the coordinates to int
+
     x1 = int(x1)
     x2 = int(x2)
     y1 = int(y1)
     y2 = int(y2)
-    # Create a random string to be used as the suffix for the image name, just in case the same name is accidentally used
-    rand = str(int(time.time()))
 
     # Save the raw image
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imwrite(f"results/raw/raw_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"results/raw/raw_image_{label}_{str(int(time.time()))}.jpg", img)
 
     # Draw the bounding box
-    img = cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+    img = cv2.rectangle(img, (x1, y1), (x2, y2), col, 2)
 
     (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
 
-    img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), color, -1)
+    img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1), col, -1)
     if label == "circle":
         label="stop"
-    img = cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 1)
+    img = cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, t_col, 1)
 
-    cv2.imwrite(f"own_results/annotated/annotated_image_{label}_{rand}.jpg", img)
+    cv2.imwrite(f"own_results/annotated/annotated_image_{label}_{str(int(time.time()))}.jpg", img)
 
 def stitch_image():
     # Initialize path to save stitched image
-    imgFolder = 'runs'
-    stitchedPath = os.path.join(imgFolder, f'stitched-{int(time.time())}.jpeg')
+    fold = 'runs'
+    final_path = os.path.join(fold, f'final_image_{int(time.time())}.jpeg')
 
-    imgPaths = glob.glob(os.path.join('own_results/annotated/', "*.jpg"))
+    image_paths = glob.glob(os.path.join('own_results/annotated/', "*.jpg"))
 
-    images = [Image.open(x) for x in imgPaths]
+    results = [Image.open(x) for x in image_paths]
 
-    width, height = zip(*(i.size for i in images))
+    width, height = zip(*(i.size for i in results))
 
     # 2 rows of images
-    num_images_per_row = len(images) // 2 + len(images) % 2
+    num_images_per_row = len(results) // 2 + len(results) % 2
 
     total_width = max(width) * num_images_per_row
     max_height = max(height) * 2
 
-    stitchedImg = Image.new('RGB', (total_width, max_height))
+    final_stitch = Image.new('RGB', (total_width, max_height))
     x_offset = 0
     y_offset = 0
 
     # Stitch the images together in 2 rows
-    for i, im in enumerate(images):
-        stitchedImg.paste(im, (x_offset, y_offset))
+    for i, im in enumerate(results):
+        final_stitch.paste(im, (x_offset, y_offset))
         x_offset += im.size[0]
         if (i + 1) % num_images_per_row == 0:
             x_offset = 0
             y_offset += im.size[1]
 
-    # Save the stitched image to the path
-    stitchedImg.save(stitchedPath)
+    final_stitch.save(final_path)
 
-    # Move original images to "originals" subdirectory
-    for img in imgPaths:
+    # Move original results to "originals" subdirectory
+    for img in image_paths:
         shutil.move(img, os.path.join(
             "own_results", "old", os.path.basename(img)))
 
-    return stitchedImg
+    return final_stitch

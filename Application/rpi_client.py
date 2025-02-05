@@ -8,8 +8,6 @@ from picamera import PiCamera
 import time
 
 
-# Flask server URL
-
 def snap_pic():
     url = f"http://{API_IP}:{API_PORT}/image"
     print(url)

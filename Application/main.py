@@ -27,18 +27,18 @@ CORS(app)
 
 model = load_model()
 # DATA_FILE = os.path.join(os.getcwd(), 'obstacles_data.json')
-DATA_FILE ='Application/obstacles_data.json'
+# DATA_FILE ='Application/obstacles_data.json'
 
-def save_data(data):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f)
+# def save_data(data):
+#     with open(DATA_FILE, 'w') as f:
+#         json.dump(data, f)
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        print("exists!")
-        with open(DATA_FILE, 'r') as f:
-            return json.load(f)
-    return {"obstacles": []}
+# def load_data():
+#     if os.path.exists(DATA_FILE):
+#         print("exists!")
+#         with open(DATA_FILE, 'r') as f:
+#             return json.load(f)
+#     return {"obstacles": []}
 
 def draw_validity_grid(grid):
     """
@@ -84,51 +84,38 @@ def status():
 #     data = request.json
 #     obstacles = content['obstacles']
 
-@app.route('/save_obstacle_data', methods=['POST'])
-def save_obstacle_data():
-    data = request.json
-    current_data = load_data()
-    current_data['obstacles'].append(data)
-    save_data(current_data)
-    return jsonify(current_data)
+# @app.route('/save_obstacle_data', methods=['POST'])
+# def save_obstacle_data():
+#     data = request.json
+#     current_data = load_data()
+#     current_data['obstacles'].append(data)
+#     save_data(current_data)
+#     return jsonify(current_data)
 
 
-@app.route('/receive_obstacle_data', methods=['GET'])
-def get_obstacle_data():
-    data = load_data()
-    print(data)
-    return jsonify(data)
+# @app.route('/receive_obstacle_data', methods=['GET'])
+# def get_obstacle_data():
+#     data = load_data()
+#     print(data)
+#     return jsonify(data)
 
 
-@app.route('/send_command_data', methods=['POST'])
-def send_command_data():
-    data = request.json
-    print(data)
-    return jsonify(data)
+# @app.route('/send_command_data', methods=['POST'])
+# def send_command_data():
+#     data = request.json
+#     print(data)
+#     return jsonify(data)
 
 
 @app.route('/image', methods=['POST'])
 def check_img():
     file = request.files['image']
     filename = file.filename
-    print("THE FILENAME IS: ",filename)
-    print(os.path.join('own_results/raw', filename))
+    # print("THE FILENAME IS: ",filename)
+    # print(os.path.join('own_results/raw', filename))
     file.save(os.path.join('own_results/raw', filename))
     file_path = os.path.join('own_results/raw', filename)
 
-    constituents = file.filename.split('_')
-    # obstacle_id = constituents[1]
-
-
-    # # ## Week 8 ## 
-    # signal = constituents[2].strip(".jpg")
-    # image_id = predict_image(filename, model, signal)
-
-    # ## Week 9 ## 
-    # # We don't need to pass in the signal anymore
-    # image_id = predict_image_week_9(filename,model)
-
-    
     image_results = predict_image(file_path,model)
 
     result = {
@@ -142,16 +129,9 @@ def check_img():
 
 @app.route('/stitch', methods=['get'])
 def stitch():
-    """
-    This is the main endpoint for the stitching command. Stitches the images using two different functions, in effect creating two stitches, just for redundancy purposes
-    """
     img = stitch_image()
     img.show()
-    img2 = stitch_image_own()
-    img2.show()
     return jsonify({"result": "ok"})
-
-
 @app.route('/algo', methods=['POST'])
 def algo():
     data = request.json['obstacles']
