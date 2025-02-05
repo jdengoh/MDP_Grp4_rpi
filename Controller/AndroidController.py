@@ -57,13 +57,9 @@ class AndroidController(BaseController):
             self.server_socket.listen(1)
 
             port = self.server_socket.getsockname()[1]
-            # uuid = pass
-
-            service_id=uuid.uuid4()
         
             bluetooth.advertise_service(self.server_socket, 
                                         "MDPGroup4", 
-                                        # service_id=uuid, 
                                         service_classes=[bluetooth.SERIAL_PORT_CLASS], 
                                         profiles=[bluetooth.SERIAL_PORT_PROFILE])
             
@@ -94,7 +90,6 @@ class AndroidController(BaseController):
             self.logger.error(f"AC - Error disconnecting from Android: {e}")
             raise e
 
-    # def send(self, msg:android_msg) -> None:
     def send(self, msg) -> None:
         try:
             self.client_socket.send(f"{msg.jsonify()}\n".encode("utf-8"))
@@ -103,15 +98,6 @@ class AndroidController(BaseController):
         except Exception as e:
             self.logger.error(f"AC - Error sending message to Android: {e}")
             raise e
-        
-    # def send_result(self, msg:android_result) -> None:
-    #     try:
-    #         self.client_socket.send(f"{msg.jsonify()}\n".encode("utf-8"))
-    #         self.logger.debug(f"Sent to Android: {msg.jsonify()}")
-
-    #     except Exception as e:
-    #         self.logger.error(f"Error sending message to Android: {e}")
-    #         raise e
         
     def send_generic(self, msg: dict) -> None:
         try:
@@ -126,8 +112,6 @@ class AndroidController(BaseController):
         try:
             data = self.client_socket.recv(1024)
             message = data.strip().decode('utf-8')
-            # message = data.decode('utf-8')
-
             self.logger.debug(f"AC - Received from Android: {message}")
             return message
 

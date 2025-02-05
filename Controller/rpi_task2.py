@@ -57,7 +57,6 @@ class RPI:
 
         # Data
         self.ack_count = 0
-        self.near_flag = self.manager.Lock()
         self.first_image = 'NA'
         self.second_image = 'NA'
     
@@ -172,12 +171,11 @@ class RPI:
 
                         print("RESULT IS: ", result)
                         if result == '38':
-                            
                             self.first_image = 'right'
                         else:
                             self.first_image = 'left'
 
-                        self.logger.info(f"HERE small direction is: {self.first_image}")
+                        self.logger.info(f"First image is: {self.first_image}")
 
                         if self.first_image == 'left':
                             self.command_q.put("X000")
@@ -242,35 +240,30 @@ class RPI:
                     self.logger.warning("STM32_RECV: Tried to release a released lock!")
 
                 if self.ack_count == 3:
-                    try:
-                        self.near_flag.release()
-                        pass
+                    time.sleep(1)
+                    result_2 = snap_pic()
 
-                    except:
-                        time.sleep(1)
-                        result_2 = snap_pic()
+                    if result_2 == '38':
+                        self.second_image = 'right'
+                    else:
+                        self.second_image= 'left'
+                    
+                    self.logger.info(f"Second image is: {self.second_image}")
 
-                        if result_2 == '38':
-                            self.second_image = 'right'
-                        else:
-                            self.second_image= 'left'
-                        
-                        self.logger.info(f"HERE big direction is: {self.second_image}")
-
-                        self.clear_queues()
-                        if self.second_image == 'left':
-                            self.command_q.put("?000")
-                            self.command_q.put("W20")
-                            self.command_q.put("l77")
-                            self.command_q.put("q000")
-                            self.command_q.put("fin")
-                                                
-                        elif self.second_image == 'right':
-                            self.command_q.put("?000")
-                            self.command_q.put("W20")
-                            self.command_q.put("r77")
-                            self.command_q.put("o000")
-                            self.command_q.put("fin")
+                    self.clear_queues()
+                    if self.second_image == 'left':
+                        self.command_q.put("?000")
+                        self.command_q.put("W20")
+                        self.command_q.put("l77")
+                        self.command_q.put("q000")
+                        self.command_q.put("fin")
+                                            
+                    elif self.second_image == 'right':
+                        self.command_q.put("?000")
+                        self.command_q.put("W20")
+                        self.command_q.put("r77")
+                        self.command_q.put("o000")
+                        self.command_q.put("fin")
             else:
                 self.logger.warning(
                     f"Ignored unknown message from STM: {msg}")
@@ -279,17 +272,12 @@ class RPI:
         while True:
             command: str = self.command_q.get()
             self.logger.debug("Comm_F - wait for unpause")
-
-            self.unpause.wait()
-            
+            self.unpause.wait()  
             self.logger.debug("Comm_F - wait for movelock")
-
             self.movement_lock.acquire()
             self.logger.debug("Comm_F - movelock acquired")
-
             time.sleep(0.5)
                   
-            # pre = ['S', 'B', 'L', 'R'] # todo
             if command.startswith('X'):
                 self.STMC.send('x')
                 self.STMC.send(command[1])
@@ -304,7 +292,6 @@ class RPI:
                 self.STMC.send(command[3])            
             
             elif command.startswith('W'):
-                # time.sleep(2)
                 self.STMC.send('w')
                 self.STMC.send(command[1])
                 self.STMC.send(command[2])
@@ -346,8 +333,6 @@ class RPI:
                 self.STMC.send('0')
                 self.STMC.send('\r')
            
-            
-         
             elif command.startswith("fin"):
                 self.unpause.clear()
                 self.movement_lock.release()
@@ -357,7 +342,7 @@ class RPI:
                 self.android_q.put(android_msg("status", "finished"))
                 self.rpi_action_q.put(PiAction(cat="stitch", value=""))
                 self.request_stitch()
-                self.logger.info("Stitch completed!.")
+                self.logger.info("Stitch completed!")
             else:
                 raise Exception(f"Unknown command: {command}")
 
@@ -394,25 +379,20 @@ class RPI:
 
  
     def request_stitch(self):
-        """Sends a stitch request to the image recognition API to stitch the different images together"""
         url = f"http://{API_IP}:{API_PORT}/stitch"
         response = requests.get(url)
 
         if response.status_code != 200:
-            self.android_q.put(android_msg(
-                "error", "Something went wrong when requesting stitch from the API."))
-            self.logger.error(
-                "Something went wrong when requesting stitch from the API.")
+            self.android_q.put(android_msg("Error", "Stitch error!"))
+            self.logger.error("Stitch error!")
             return
 
-        self.logger.info("Images stitched!")
-        self.android_q.put(android_msg("info", "Images stitched!"))
+        self.logger.info("Stich complete!")
+        self.android_q.put(android_msg("info", "Stich complete!"))
 
     def clear_queues(self):
-        """Clear both command and path queues"""
         while not self.command_q.empty():
             self.command_q.get()
-
 
 if __name__ == "__main__":
     rpi = RPI()
