@@ -3,6 +3,8 @@ import time
 from flask import Flask, jsonify, send_file, request
 from picamera import PiCamera
 
+# we used this to test if our camera works
+
 app = Flask(__name__)
 
 # Configure the camera
