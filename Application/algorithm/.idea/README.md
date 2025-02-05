@@ -1,0 +1,1 @@
+one of our random ideas to change to circle instead of square zones in the algo
