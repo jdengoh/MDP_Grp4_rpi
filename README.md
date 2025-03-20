@@ -1,18 +1,17 @@
 # SC2079 MDP - Group 4 RPI and Algo Code
 
+
 Hi! Welcome to our group's RPI and Algo repository. We did our best to clean up the code after our project ended, so hopefully it is as organised as it can be for your reference.
 
 We managed to place **9th** place in task 1 and **15th** place for task 2 :D
 
-## Overview
-
-Hi! Welcome to our group's RPI and Algo repository. We did our best to clean up the code after our project ended, so hopefully it is as organised as it can be for your reference.
-
 You can find our group's video [here](https://www.youtube.com/watch?v=ft0QzwhuB7s)!
 
-This repository's Controller folder will be hosted on the RPI itself. It will serve as an orchestrator to facilitate the connection between the STM board, Android and Algorithm.
+## Overview
 
-The Application folder will be hosted on another laptop, this is where we will be running both the algorithm and image inference server.
+This repository's `Controller/` folder will be hosted on the RPI itself. It will serve as an orchestrator to facilitate the connection between the STM board, Android and Algorithm.
+
+The `Application/` folder will be hosted on another laptop, this is where we will be running both the algorithm and image inference server.
 
 ## RPI
 
